@@ -21,19 +21,21 @@ interface SidebarLinkProps {
 
 const SidebarLink = ({ href, icon, children, active }: SidebarLinkProps) => {
   return (
-    <Link href={href}>
-      <a
-        className={cn(
-          "group flex items-center px-2 py-2 text-base font-medium rounded-md",
-          active
-            ? "bg-primary-light bg-opacity-10 text-primary"
-            : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
-        )}
-      >
-        <span className="h-6 w-6 mr-3">{icon}</span>
-        {children}
-      </a>
-    </Link>
+    <div>
+      <Link href={href}>
+        <div
+          className={cn(
+            "group cursor-pointer flex items-center px-2 py-2 text-base font-medium rounded-md",
+            active
+              ? "bg-primary-light bg-opacity-10 text-primary"
+              : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+          )}
+        >
+          <span className="h-6 w-6 mr-3">{icon}</span>
+          {children}
+        </div>
+      </Link>
+    </div>
   );
 };
 

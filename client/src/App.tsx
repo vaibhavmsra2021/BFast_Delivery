@@ -1,4 +1,4 @@
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
@@ -19,21 +19,25 @@ import NotFound from "@/pages/not-found";
 
 // Layouts
 import { Layout } from "@/components/layout/Layout";
-import { UserRole } from "./lib/auth";
+import { UserRole, UserRoleType } from "./lib/auth";
 
 function ProtectedRoute({ 
   component: Component, 
   roles = [] 
 }: { 
   component: React.ComponentType<any>, 
-  roles?: UserRole[] 
+  roles?: UserRoleType[] 
 }) {
   const { isAuthenticated, checkAccess } = useAuth();
+  const [, setLocation] = useLocation();
   
+  // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return null; // Layout will redirect to login
+    setLocation("/login");
+    return null;
   }
   
+  // Check role-based access
   if (roles.length > 0 && !checkAccess(roles)) {
     return <NotFound />;
   }
@@ -49,8 +53,13 @@ function Router() {
   return (
     <Switch>
       {/* Public routes */}
-      <Route path="/login" component={LoginPage} />
-      <Route path="/track/:awb" component={PublicTrack} />
+      <Route path="/login">
+        <LoginPage />
+      </Route>
+      
+      <Route path="/track/:awb">
+        {(params) => <PublicTrack />}
+      </Route>
       
       {/* Protected routes with role-based access */}
       <Route path="/home">
@@ -97,13 +106,15 @@ function Router() {
         />
       </Route>
       
-      {/* Redirect from root to dashboard */}
+      {/* Root route */}
       <Route path="/">
         <ProtectedRoute component={Dashboard} />
       </Route>
       
       {/* Fallback to 404 */}
-      <Route component={NotFound} />
+      <Route path="/:rest*">
+        <NotFound />
+      </Route>
     </Switch>
   );
 }

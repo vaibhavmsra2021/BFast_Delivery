@@ -29,7 +29,7 @@ export class ShopifyService {
   }
 
   // Get orders from Shopify
-  private async getShopifyOrders(client: Client): Promise<any[]> {
+  async getShopifyOrders(client: Client): Promise<any[]> {
     try {
       // In a real implementation, this would use the Shopify API
       // For now, simulate API call

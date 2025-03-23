@@ -542,7 +542,7 @@ export default function Channels() {
                             <TableCell><Skeleton className="h-9 w-24 rounded-md" /></TableCell>
                           </TableRow>
                         ))
-                      ) : clients && clients.length > 0 ? (
+                      ) : clients && Array.isArray(clients) && clients.length > 0 ? (
                         clients.map((client: any) => (
                           <TableRow key={client.id}>
                             <TableCell className="font-medium">{client.client_name} Store</TableCell>
@@ -737,7 +737,7 @@ export default function Channels() {
                             <TableCell><Skeleton className="h-9 w-24 rounded-md" /></TableCell>
                           </TableRow>
                         ))
-                      ) : clients && clients.length > 0 ? (
+                      ) : clients && Array.isArray(clients) && clients.length > 0 ? (
                         clients.map((client: any) => (
                           <TableRow key={client.id}>
                             <TableCell className="font-medium">{client.client_name}</TableCell>

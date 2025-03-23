@@ -160,6 +160,17 @@ export class MemStorage implements IStorage {
     return client;
   }
   
+  async updateClient(id: number, clientUpdate: Partial<InsertClient>): Promise<Client> {
+    const existingClient = this.clients.get(id);
+    if (!existingClient) {
+      throw new Error(`Client with id ${id} not found`);
+    }
+    
+    const updatedClient = { ...existingClient, ...clientUpdate };
+    this.clients.set(id, updatedClient);
+    return updatedClient;
+  }
+  
   async getAllClients(): Promise<Client[]> {
     return Array.from(this.clients.values());
   }

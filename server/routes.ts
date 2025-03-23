@@ -282,23 +282,23 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
           return res.status(400).json({ message: "Missing required Shiprocket API key" });
         }
         
-        // Create a temporary client to test the connection
-        const tempClient = {
-          client_id: "temp-test-client",
-          client_name: "Temporary Test Client",
-          shopify_store_id: "not-needed-for-test",
-          shopify_api_key: "not-needed-for-test",
-          shopify_api_secret: "not-needed-for-test",
-          shiprocket_api_key
-        };
-        
-        // Use the shiprocket service to test the connection
+        // Make a direct API call to test the connection
         try {
-          // In a real implementation, we would make an actual API call
-          // For this test, we'll just check if the API accepts our key by attempting to track a dummy AWB
-          await shiprocketService.getTrackingInfo("DUMMY-AWB-123", tempClient.client_id);
+          const url = 'https://apiv2.shiprocket.in/v1/external/auth/login';
+          const response = await axios.post(url, {
+            email: 'your-email@example.com',  // This is just for testing
+            password: shiprocket_api_key
+          });
+          
+          if (response.data && response.data.token) {
           
           res.json({ success: true, message: "Successfully connected to Shiprocket" });
+          } else {
+            res.status(400).json({ 
+              success: false, 
+              message: "Invalid Shiprocket API key"
+            });
+          }
         } catch (error) {
           res.status(400).json({ 
             success: false, 

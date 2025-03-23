@@ -18,6 +18,7 @@ export interface IStorage {
   getClient(id: number): Promise<Client | undefined>;
   getClientByClientId(clientId: string): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
+  updateClient(id: number, client: Partial<InsertClient>): Promise<Client>;
   getAllClients(): Promise<Client[]>;
   
   // Order operations

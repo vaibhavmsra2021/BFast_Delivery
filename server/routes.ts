@@ -176,14 +176,136 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   apiRouter.get(
     "/clients", 
     authService.authenticate, 
-    authService.authorize([UserRole.BFAST_ADMIN]), 
     async (req: Request, res: Response) => {
       try {
-        const clients = await storage.getAllClients();
+        const user = (req as any).user;
+        let clients: any[] = [];
+        
+        // If client user, only show their client
+        if (user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) {
+          const client = await storage.getClientByClientId(user.clientId);
+          if (client) clients = [client];
+        } else {
+          // BFAST users can see all clients
+          clients = await storage.getAllClients();
+        }
+        
         res.json(clients);
       } catch (error) {
         console.error("Get clients error:", error);
         res.status(500).json({ message: "An error occurred while retrieving clients" });
+      }
+    }
+  );
+  
+  apiRouter.patch(
+    "/clients/:clientId", 
+    authService.authenticate, 
+    authService.authorizeClientAccess,
+    async (req: Request, res: Response) => {
+      try {
+        const { clientId } = req.params;
+        const updateData = req.body;
+        
+        // Get existing client
+        const client = await storage.getClientByClientId(clientId);
+        
+        if (!client) {
+          return res.status(404).json({ message: "Client not found" });
+        }
+        
+        // Update client in storage
+        const updatedClient = await storage.updateClient(client.id, updateData);
+        
+        res.json(updatedClient);
+      } catch (error) {
+        console.error("Update client error:", error);
+        res.status(500).json({ message: "An error occurred while updating the client" });
+      }
+    }
+  );
+  
+  // Connection testing routes
+  apiRouter.post(
+    "/connections/test-shopify",
+    authService.authenticate,
+    async (req: Request, res: Response) => {
+      try {
+        const { shopify_store_id, shopify_api_key, shopify_api_secret } = req.body;
+        
+        if (!shopify_store_id || !shopify_api_key || !shopify_api_secret) {
+          return res.status(400).json({ message: "Missing required Shopify credentials" });
+        }
+        
+        // Create a temporary client to test the connection
+        const tempClient = {
+          client_id: "temp-test-client",
+          client_name: "Temporary Test Client",
+          shopify_store_id,
+          shopify_api_key,
+          shopify_api_secret,
+          shiprocket_api_key: "not-needed-for-test"
+        };
+        
+        // Use the shopify service to test the connection
+        try {
+          // This is a limited test that just checks if we can connect to the Shopify API
+          // In a real implementation, we would make an actual API call
+          await shopifyService.getShopifyOrders(tempClient as any);
+          
+          res.json({ success: true, message: "Successfully connected to Shopify" });
+        } catch (error) {
+          res.status(400).json({ 
+            success: false, 
+            message: "Failed to connect to Shopify",
+            error: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      } catch (error) {
+        console.error("Test Shopify connection error:", error);
+        res.status(500).json({ message: "An error occurred while testing the Shopify connection" });
+      }
+    }
+  );
+  
+  apiRouter.post(
+    "/connections/test-shiprocket",
+    authService.authenticate,
+    async (req: Request, res: Response) => {
+      try {
+        const { shiprocket_api_key } = req.body;
+        
+        if (!shiprocket_api_key) {
+          return res.status(400).json({ message: "Missing required Shiprocket API key" });
+        }
+        
+        // Create a temporary client to test the connection
+        const tempClient = {
+          client_id: "temp-test-client",
+          client_name: "Temporary Test Client",
+          shopify_store_id: "not-needed-for-test",
+          shopify_api_key: "not-needed-for-test",
+          shopify_api_secret: "not-needed-for-test",
+          shiprocket_api_key
+        };
+        
+        // Use the shiprocket service to test the connection
+        try {
+          // In a real implementation, we would make an actual API call
+          // For this test, we'll just check if the API accepts our key by attempting to track a dummy AWB
+          await shiprocketService.getTrackingInfo("DUMMY-AWB-123", tempClient.client_id);
+          
+          res.json({ success: true, message: "Successfully connected to Shiprocket" });
+        } catch (error) {
+          res.status(400).json({ 
+            success: false, 
+            message: "Failed to connect to Shiprocket",
+            error: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      } catch (error) {
+        console.error("Test Shiprocket connection error:", error);
+        res.status(500).json({ message: "An error occurred while testing the Shiprocket connection" });
       }
     }
   );

@@ -29,6 +29,21 @@ export const getClients = async () => {
   return response.json();
 };
 
+export const updateClient = async (clientId: string, clientData: any) => {
+  const response = await apiRequest('PATCH', `/api/clients/${clientId}`, clientData);
+  return response.json();
+};
+
+export const testShopifyConnection = async (credentials: any) => {
+  const response = await apiRequest('POST', '/api/connections/test-shopify', credentials);
+  return response.json();
+};
+
+export const testShiprocketConnection = async (credentials: any) => {
+  const response = await apiRequest('POST', '/api/connections/test-shiprocket', credentials);
+  return response.json();
+};
+
 // Orders API
 export const getPendingOrders = async () => {
   const response = await apiRequest('GET', '/api/orders/pending');

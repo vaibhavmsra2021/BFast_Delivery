@@ -123,7 +123,8 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         
         if (user.role === UserRole.CLIENT_ADMIN) {
           // Client admin can only see users for their client
-          users = await storage.getUsersByClientId(user.clientId);
+          const clientId = user.clientId || user.client_id;
+          users = await storage.getUsersByClientId(clientId);
         } else {
           // Bfast admin can see all users
           // For now, just return all users from memory storage
@@ -184,7 +185,8 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         
         // If client user, only show their client
         if (user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) {
-          const client = await storage.getClientByClientId(user.clientId);
+          const clientId = user.clientId || user.client_id;
+          const client = await storage.getClientByClientId(clientId);
           if (client) clients = [client];
         } else {
           // BFAST users can see all clients
@@ -502,7 +504,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
           for (const update of updates) {
             const order = await storage.getOrderByOrderId(update.orderId);
             
-            if (order && order.client_id !== user.clientId) {
+            if (order && order.client_id !== user.clientId && order.client_id !== user.client_id) {
               return res.status(403).json({ 
                 message: `You don't have permission to update order ${update.orderId}` 
               });

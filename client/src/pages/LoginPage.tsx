@@ -65,7 +65,7 @@ export default function LoginPage() {
         title: "Login Successful",
         description: "Welcome to Bfast Shipment Management",
       });
-      setLocation("/home"); // Route is defined as /home in App.tsx
+      setLocation("/home");
     } catch (err) {
       console.error("Login error:", err);
       setError(

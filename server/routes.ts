@@ -89,7 +89,8 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         // Client admin can only create client executive users for their client
         const user = (req as any).user;
         if (user.role === UserRole.CLIENT_ADMIN) {
-          if (userData.role !== UserRole.CLIENT_EXECUTIVE || userData.client_id !== user.clientId) {
+          if (userData.role !== UserRole.CLIENT_EXECUTIVE || 
+              (userData.client_id !== user.clientId && userData.client_id !== user.client_id)) {
             return res.status(403).json({ message: "You can only create client executive users for your client" });
           }
         }
@@ -321,7 +322,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         
         // If client user, only show orders for their client
         if (user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) {
-          clientId = user.clientId;
+          clientId = user.clientId || user.client_id;
         }
         
         const pendingOrders = await storage.getPendingOrders(clientId);
@@ -343,7 +344,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         
         // If client user, only show orders for their client
         if (user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) {
-          clientId = user.clientId;
+          clientId = user.clientId || user.client_id;
         }
         
         const filter = req.query.status as string;
@@ -373,7 +374,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         
         // If client user, only show orders for their client
         if (user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) {
-          clientId = user.clientId;
+          clientId = user.clientId || user.client_id;
         }
         
         const allOrders = await storage.getAllOrders(clientId);
@@ -441,7 +442,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         // Check client access
         const user = (req as any).user;
         if ((user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) && 
-            order.client_id !== user.clientId) {
+            order.client_id !== user.clientId && order.client_id !== user.client_id) {
           return res.status(403).json({ message: "You don't have permission to update this order" });
         }
         

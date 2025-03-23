@@ -18,6 +18,7 @@ export class AuthService {
       username: user.username,
       role: user.role,
       clientId: user.client_id,
+      client_id: user.client_id,
     };
 
     return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
@@ -134,7 +135,7 @@ export class AuthService {
     }
 
     // Client roles only have access to their own client
-    if (user.clientId !== requestedClientId) {
+    if (user.clientId !== requestedClientId && user.client_id !== requestedClientId) {
       res.status(403).json({ message: "You don't have permission to access data for this client" });
       return;
     }

@@ -60,7 +60,7 @@ export class MemStorage implements IStorage {
     this.currentTokenId = 1;
     
     // Initialize with default test users with password = "password"
-    const hashedPassword = "$2b$10$YiN1pZOOFRqXECbQYrTdUecUVE7.n0DZG.5rPJGUxSxfPzDgPgLgK";
+    const hashedPassword = "$2b$10$yY3EGjLBlbMwXhip.0AZ8Os8JyJlTGc3ivdOeGDfbnIoRgiwxoCSq";
     
     // 1. BFAST Admin
     this.createUser({
@@ -83,7 +83,7 @@ export class MemStorage implements IStorage {
     });
     
     // Create a test client
-    const testClient = this.createClient({
+    const testClientData = {
       client_id: "ACME001",
       client_name: "ACME Corp",
       shopify_store_id: "acme-store",
@@ -91,7 +91,10 @@ export class MemStorage implements IStorage {
       shopify_api_secret: "test-secret",
       shiprocket_api_key: "test-key",
       logo_url: null
-    });
+    };
+    
+    // Add the client first
+    this.createClient(testClientData);
     
     // 3. Client Admin
     this.createUser({
@@ -100,7 +103,7 @@ export class MemStorage implements IStorage {
       name: "Client Admin",
       email: "admin@acme.com",
       role: UserRole.CLIENT_ADMIN,
-      client_id: testClient.client_id
+      client_id: testClientData.client_id
     });
     
     // 4. Client Executive
@@ -110,7 +113,7 @@ export class MemStorage implements IStorage {
       name: "Client Executive",
       email: "exec@acme.com",
       role: UserRole.CLIENT_EXECUTIVE,
-      client_id: testClient.client_id
+      client_id: testClientData.client_id
     });
   }
 

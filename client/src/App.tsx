@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Route, Switch, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -29,11 +30,17 @@ function ProtectedRoute({
   roles?: UserRoleType[] 
 }) {
   const { isAuthenticated, checkAccess } = useAuth();
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   
-  // Redirect to login if not authenticated
+  // Effect to handle redirection after render
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isAuthenticated, navigate]);
+  
+  // Don't render anything if not authenticated
   if (!isAuthenticated) {
-    setLocation("/login");
     return null;
   }
   

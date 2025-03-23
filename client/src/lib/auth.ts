@@ -39,7 +39,21 @@ export const useAuth = create<AuthState>()(
       
       login: async (username: string, password: string) => {
         try {
-          const response = await apiRequest('POST', '/api/auth/login', { username, password });
+          // Don't use apiRequest here as it depends on the auth token which isn't set yet
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password }),
+            credentials: 'include',
+          });
+          
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`${response.status}: ${text || response.statusText}`);
+          }
+          
           const data = await response.json();
           
           set({
@@ -47,6 +61,12 @@ export const useAuth = create<AuthState>()(
             token: data.token,
             isAuthenticated: true
           });
+          
+          // Force a reload on login to ensure all components get the auth state
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 100);
+          
         } catch (error) {
           console.error('Login error:', error);
           throw error;
@@ -55,8 +75,15 @@ export const useAuth = create<AuthState>()(
       
       logout: async () => {
         try {
-          if (get().token) {
-            await apiRequest('POST', '/api/auth/logout');
+          const token = get().token;
+          if (token) {
+            await fetch('/api/auth/logout', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              },
+              credentials: 'include',
+            });
           }
         } catch (error) {
           console.error('Logout error:', error);
@@ -67,6 +94,11 @@ export const useAuth = create<AuthState>()(
             token: null,
             isAuthenticated: false
           });
+          
+          // Force a reload on logout
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 100);
         }
       },
       

@@ -81,7 +81,7 @@ export function OrderFilter({ onFilterChange }: OrderFilterProps) {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="Delivered">Delivered</SelectItem>
                   <SelectItem value="In-Process">In Process</SelectItem>
                   <SelectItem value="NDR">NDR</SelectItem>

@@ -11,7 +11,7 @@ export default function OrderData() {
   const { toast } = useToast();
   const [filters, setFilters] = useState<OrderFilters>({
     search: "",
-    status: "",
+    status: "all",
     dateFrom: null,
     dateTo: null,
     courier: "",

@@ -117,7 +117,14 @@ export default function ShiprocketData() {
 
   // Handle filter changes
   const handleFilterChange = (key: string, value: string) => {
-    setFilter(prev => ({ ...prev, [key]: value }));
+    // If value is 'all', remove this filter
+    if (value === 'all') {
+      const newFilter = { ...filter };
+      delete newFilter[key];
+      setFilter(newFilter);
+    } else {
+      setFilter(prev => ({ ...prev, [key]: value }));
+    }
   };
 
   // Clear all filters
@@ -149,13 +156,13 @@ export default function ShiprocketData() {
                     <Label htmlFor="delivery-status">Delivery Status</Label>
                     <Select
                       onValueChange={(value) => handleFilterChange('delivery_status', value)}
-                      value={filter.delivery_status || ""}
+                      value={filter.delivery_status || "all"}
                     >
                       <SelectTrigger id="delivery-status">
                         <SelectValue placeholder="Select a status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
                         <SelectItem value="Delivered">Delivered</SelectItem>
                         <SelectItem value="RTO Delivered">RTO</SelectItem>
                         <SelectItem value="Damaged">Damaged</SelectItem>
@@ -168,13 +175,13 @@ export default function ShiprocketData() {
                     <Label htmlFor="client-id">Client</Label>
                     <Select
                       onValueChange={(value) => handleFilterChange('client_id', value)}
-                      value={filter.client_id || ""}
+                      value={filter.client_id || "all"}
                     >
                       <SelectTrigger id="client-id">
                         <SelectValue placeholder="Select a client" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
                         <SelectItem value="Dholkee">Dholkee</SelectItem>
                         <SelectItem value="INFUSION NOTES">INFUSION NOTES</SelectItem>
                         <SelectItem value="OBS">OBS</SelectItem>
@@ -186,13 +193,13 @@ export default function ShiprocketData() {
                     <Label htmlFor="month">Month</Label>
                     <Select
                       onValueChange={(value) => handleFilterChange('month', value)}
-                      value={filter.month || ""}
+                      value={filter.month || "all"}
                     >
                       <SelectTrigger id="month">
                         <SelectValue placeholder="Select a month" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
                         <SelectItem value="1">January</SelectItem>
                         <SelectItem value="2">February</SelectItem>
                         <SelectItem value="3">March</SelectItem>

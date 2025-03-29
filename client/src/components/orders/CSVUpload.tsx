@@ -57,10 +57,17 @@ export function CSVUpload({
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">{title}</h2>
-        <p className="text-muted-foreground">{description}</p>
-      </div>
+      {title && (
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold">{title}</h2>
+          <p className="text-muted-foreground">{description}</p>
+        </div>
+      )}
+      {!title && description && (
+        <div className="mb-6">
+          <p className="text-muted-foreground">{description}</p>
+        </div>
+      )}
 
       <div
         {...getRootProps()}

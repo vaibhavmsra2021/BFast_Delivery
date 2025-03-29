@@ -316,7 +316,7 @@ export default function ShiprocketData() {
               </CardHeader>
               <CardContent>
                 <CSVUpload
-                  title="Upload Shiprocket Data"
+                  title=""
                   description="Upload your Shiprocket CSV file to view and analyze your shipping data."
                   onUpload={handleCsvUpload}
                   templateUrl="/samples/shiprocket-template.csv"

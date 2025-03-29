@@ -16,6 +16,7 @@ import Channels from "@/pages/Channels";
 import AddClient from "@/pages/AddClient";
 import AddUser from "@/pages/AddUser";
 import PublicTrack from "@/pages/PublicTrack";
+import ShiprocketData from "@/pages/ShiprocketData";
 import NotFound from "@/pages/not-found";
 
 // Layouts
@@ -110,6 +111,13 @@ function Router() {
         <ProtectedRoute 
           component={AddUser} 
           roles={[UserRole.BFAST_ADMIN, UserRole.CLIENT_ADMIN]} 
+        />
+      </Route>
+
+      <Route path="/shiprocket-data">
+        <ProtectedRoute 
+          component={ShiprocketData} 
+          roles={[UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE, UserRole.CLIENT_ADMIN]}
         />
       </Route>
       

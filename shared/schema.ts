@@ -161,3 +161,40 @@ export type Order = typeof orders.$inferSelect;
 
 export type InsertToken = z.infer<typeof insertTokenSchema>;
 export type TokenBlacklist = typeof tokenBlacklist.$inferSelect;
+
+// Shiprocket CSV Data Schema
+export const shiprocketDataSchema = z.object({
+  awb: z.string().nullable(),
+  courier_type: z.string().nullable(),
+  client_order_id: z.string().nullable(),
+  order_confirmation: z.string().nullable(),
+  bfast_status: z.string().nullable(),
+  delivery_status: z.string().nullable(),
+  sale_channel: z.string().nullable(),
+  aggregator_partner: z.string().nullable(),
+  client_id: z.string().nullable(),
+  month: z.string().nullable(),
+  pickup_date: z.string().nullable(),
+  sale_order_number: z.string().nullable(),
+  order_date: z.string().nullable(),
+  delivery_center_name: z.string().nullable(),
+  transport_mode: z.string().nullable(),
+  payment_mode: z.string().nullable(),
+  cod_amount: z.string().nullable(),
+  customer_first_name: z.string().nullable(),
+  customer_last_name: z.string().nullable(),
+  customer_email: z.string().nullable(),
+  customer_phone: z.string().nullable(),
+  shipping_address: z.string().nullable(),
+  customer_alt_phone: z.string().nullable(),
+  shipping_address_2: z.string().nullable(),
+  shipping_city: z.string().nullable(),
+  shipping_state: z.string().nullable(),
+  shipping_pincode: z.string().nullable(),
+  item_category: z.string().nullable(),
+  item_sku_code: z.string().nullable(),
+  item_description: z.string().nullable(),
+  quantity: z.string().nullable()
+});
+
+export type ShiprocketData = z.infer<typeof shiprocketDataSchema>;

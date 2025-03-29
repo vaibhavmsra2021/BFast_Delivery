@@ -3,7 +3,8 @@ import {
   Client, InsertClient, 
   Order, InsertOrder, 
   TokenBlacklist, InsertToken,
-  UserRole, OrderStatus 
+  UserRole, OrderStatus,
+  ShiprocketData, shiprocketDataSchema
 } from "@shared/schema";
 
 // Modify the interface with CRUD methods needed
@@ -36,6 +37,10 @@ export interface IStorage {
   // Token blacklist operations
   addTokenToBlacklist(token: InsertToken): Promise<void>;
   isTokenBlacklisted(token: string): Promise<boolean>;
+  
+  // Shiprocket CSV data operations
+  saveShiprocketData(data: ShiprocketData[]): Promise<void>;
+  getShiprocketData(filters?: Record<string, string>): Promise<ShiprocketData[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -43,6 +48,7 @@ export class MemStorage implements IStorage {
   private clients: Map<number, Client>;
   private orders: Map<number, Order>;
   private tokenBlacklist: Map<string, TokenBlacklist>;
+  private shiprocketData: ShiprocketData[] = [];
   
   currentUserId: number;
   currentClientId: number;
@@ -275,6 +281,30 @@ export class MemStorage implements IStorage {
   
   async isTokenBlacklisted(token: string): Promise<boolean> {
     return this.tokenBlacklist.has(token);
+  }
+
+  // Shiprocket CSV data operations
+  async saveShiprocketData(data: ShiprocketData[]): Promise<void> {
+    // Replace existing data with new data
+    this.shiprocketData = data;
+  }
+
+  async getShiprocketData(filters?: Record<string, string>): Promise<ShiprocketData[]> {
+    if (!filters) {
+      return this.shiprocketData;
+    }
+
+    return this.shiprocketData.filter(item => {
+      // Check each filter against the corresponding property
+      return Object.entries(filters).every(([key, value]) => {
+        const itemValue = item[key as keyof ShiprocketData];
+        // If the item has this property and it matches the filter value
+        if (itemValue) {
+          return itemValue.toString().toLowerCase().includes(value.toLowerCase());
+        }
+        return false;
+      });
+    });
   }
 }
 

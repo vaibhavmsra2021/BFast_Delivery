@@ -132,3 +132,15 @@ export const getPublicTrackingInfo = async (awb: string) => {
   
   return response.json();
 };
+
+// Shiprocket CSV data endpoints
+export const uploadShiprocketCSV = async (data: any[]) => {
+  const response = await apiRequest('POST', '/api/shiprocket/upload-csv', data);
+  return response.json();
+};
+
+export const getShiprocketCSVData = async (filters?: any) => {
+  const queryParams = filters ? `?${new URLSearchParams(filters).toString()}` : '';
+  const response = await apiRequest('GET', `/api/shiprocket/data${queryParams}`);
+  return response.json();
+};

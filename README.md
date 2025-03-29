@@ -1,5 +1,5 @@
 
-# BFast Shipment Management System
+# BFast Shopify Order Management Interface
 
 A full-stack web application for managing orders and shipments across multiple Shopify stores, built with React, Express, and PostgreSQL.
 
@@ -36,7 +36,7 @@ JWT_SECRET=your_jwt_secret
 
 ## Getting Started
 
-1. Fork this template on Replit
+1. Fork this repo from github
 
 2. Install dependencies:
 ```bash
@@ -92,17 +92,7 @@ The application will be available at port 5000.
 - CLIENT_ADMIN: Client-specific management
 - CLIENT_EXECUTIVE: Client-specific order view
 
-## Deployment
 
-To deploy your application:
+## Deployed Link
 
-1. Click the "Deploy" button in the Replit interface
-2. Select "Autoscale" deployment type
-3. Configure the deployment settings:
-   - Build command: `npm run build`
-   - Run command: `npm start`
-4. Click "Deploy" to publish your application
-
-## License
-
-MIT License
+https://912a6edd-ed60-4812-9f52-b61e5f02703d-00-1bmhh06zm4t1j.janeway.replit.dev

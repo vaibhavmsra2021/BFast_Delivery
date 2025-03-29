@@ -25,11 +25,12 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  isFormData?: boolean,
 ): Promise<Response> {
   const token = getAuthToken();
   const headers: Record<string, string> = {};
   
-  if (data) {
+  if (data && !isFormData) {
     headers["Content-Type"] = "application/json";
   }
   
@@ -37,10 +38,14 @@ export async function apiRequest(
     headers["Authorization"] = `Bearer ${token}`;
   }
   
+  const body = isFormData 
+    ? data as FormData 
+    : data ? JSON.stringify(data) : undefined;
+    
   const res = await fetch(url, {
     method,
     headers,
-    body: data ? JSON.stringify(data) : undefined,
+    body,
     credentials: "include",
   });
 

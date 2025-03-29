@@ -9,7 +9,8 @@ import {
   FileBarChart,
   Globe,
   UserPlus,
-  Users
+  Users,
+  Database
 } from "lucide-react";
 
 interface SidebarLinkProps {
@@ -55,6 +56,7 @@ export function Sidebar() {
   const showOrderData = true;
   const showTrack = true;
   const showManifest = isBfastAdmin || isBfastExec || isClientAdmin;
+  const showShiprocketData = isBfastAdmin || isBfastExec || isClientAdmin;
   const showChannels = isBfastAdmin;
   const showAddClient = isBfastAdmin;
   const showAddUser = isBfastAdmin || isClientAdmin;
@@ -117,6 +119,16 @@ export function Sidebar() {
               active={location === "/manifest-orders"}
             >
               Manifest
+            </SidebarLink>
+          )}
+          
+          {showShiprocketData && (
+            <SidebarLink 
+              href="/shiprocket-data" 
+              icon={<Database className="text-current" />}
+              active={location === "/shiprocket-data"}
+            >
+              Shiprocket Data
             </SidebarLink>
           )}
           

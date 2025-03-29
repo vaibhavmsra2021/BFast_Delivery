@@ -6,12 +6,15 @@ import { AuthService } from "./services/auth";
 import { ShopifyService } from "./services/shopify";
 import { ShiprocketService } from "./services/shiprocket";
 import { CronService } from "./services/cron";
+import busboy from "busboy";
 import { 
   insertUserSchema, 
   insertClientSchema, 
   insertOrderSchema, 
   UserRole, 
-  OrderStatus 
+  OrderStatus,
+  shiprocketDataSchema,
+  ShiprocketData
 } from "@shared/schema";
 
 export async function registerRoutes(app: express.Express): Promise<Server> {
@@ -588,6 +591,75 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       res.status(500).json({ message: "An error occurred while tracking the shipment" });
     }
   });
+
+  // Shiprocket CSV data routes
+  apiRouter.post(
+    "/shiprocket/upload-csv",
+    authService.authenticate,
+    authService.authorize([UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE, UserRole.CLIENT_ADMIN]),
+    async (req: Request, res: Response) => {
+      try {
+        // Get the JSON data from the request body
+        const shiprocketData = req.body;
+        
+        if (!Array.isArray(shiprocketData)) {
+          return res.status(400).json({ message: "Invalid data format. Expected array of shiprocket entries" });
+        }
+        
+        const parsedData: ShiprocketData[] = [];
+        
+        for (const entry of shiprocketData) {
+          // Validate against schema
+          const validationResult = shiprocketDataSchema.safeParse(entry);
+          if (validationResult.success) {
+            parsedData.push(validationResult.data);
+          } else {
+            console.error("Error validating entry:", validationResult.error);
+          }
+        }
+        
+        // Save the parsed data
+        await storage.saveShiprocketData(parsedData);
+        
+        res.status(200).json({ 
+          message: "Shiprocket data uploaded successfully", 
+          count: parsedData.length 
+        });
+      } catch (error) {
+        console.error("Upload Shiprocket data error:", error);
+        res.status(500).json({ message: "An error occurred while uploading Shiprocket data" });
+      }
+    }
+  );
+  
+  apiRouter.get(
+    "/shiprocket/data",
+    authService.authenticate,
+    async (req: Request, res: Response) => {
+      try {
+        const filters: Record<string, string> = {};
+        
+        // Extract filters from query params
+        const allowedFilters = [
+          'delivery_status', 'client_id', 'month', 'awb', 'courier_type',
+          'payment_mode', 'shipping_city', 'shipping_state', 'item_category'
+        ];
+        
+        allowedFilters.forEach(filter => {
+          if (req.query[filter]) {
+            filters[filter] = req.query[filter] as string;
+          }
+        });
+        
+        const data = await storage.getShiprocketData(Object.keys(filters).length > 0 ? filters : undefined);
+        
+        res.json(data);
+      } catch (error) {
+        console.error("Get Shiprocket data error:", error);
+        res.status(500).json({ message: "An error occurred while retrieving Shiprocket data" });
+      }
+    }
+  );
   
   // Use API router
   app.use("/api", apiRouter);

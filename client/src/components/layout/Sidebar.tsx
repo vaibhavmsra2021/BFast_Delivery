@@ -40,7 +40,11 @@ const SidebarLink = ({ href, icon, children, active }: SidebarLinkProps) => {
   );
 };
 
-export function Sidebar() {
+interface SidebarProps {
+  isMobile?: boolean;
+}
+
+export function Sidebar({ isMobile = false }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
 
@@ -62,7 +66,10 @@ export function Sidebar() {
   const showAddUser = isBfastAdmin || isClientAdmin;
   
   return (
-    <div className="w-64 bg-white shadow-md overflow-hidden hidden lg:block">
+    <div className={cn(
+      "w-64 bg-white shadow-md overflow-hidden",
+      isMobile ? "block" : "hidden lg:block"
+    )}>
       <div className="px-4 py-5 flex items-center">
         <div className="h-10 w-10 rounded bg-primary text-white flex items-center justify-center">
           <span className="text-lg font-semibold">B</span>

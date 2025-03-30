@@ -54,7 +54,7 @@ export function Layout({ children }: LayoutProps) {
                 </svg>
               </button>
             </div>
-            <Sidebar />
+            <Sidebar isMobile={true} />
           </div>
         </div>
       )}

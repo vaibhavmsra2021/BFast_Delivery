@@ -19,6 +19,7 @@ interface User {
   email: string;
   role: UserRoleType;
   clientId: string | null;
+  client_id?: string | null; // Added for compatibility with server response
 }
 
 interface AuthState {

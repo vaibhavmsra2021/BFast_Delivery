@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Bell, User, LogOut, Menu } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useLocation } from "wouter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,7 @@ interface HeaderProps {
 export function Header({ onMobileMenuToggle }: HeaderProps) {
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [, navigate] = useLocation();
 
   if (!user) return null;
   
@@ -119,7 +121,7 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
                   <div className="text-xs text-gray-500">{user.email}</div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/profile")}>
                   <User className="mr-2 h-4 w-4" />
                   <span>Your Profile</span>
                 </DropdownMenuItem>

@@ -18,7 +18,6 @@ export class AuthService {
       username: user.username,
       role: user.role,
       clientId: user.client_id,
-      client_id: user.client_id,
     };
 
     return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
@@ -100,7 +99,7 @@ export class AuthService {
   };
 
   // Middleware to check user role
-  authorize = (allowedRoles: UserRole[]) => {
+  authorize = (allowedRoles: (typeof UserRole)[keyof typeof UserRole][]) => {
     return (req: Request, res: Response, next: NextFunction): void => {
       const user = (req as any).user;
 
@@ -135,7 +134,7 @@ export class AuthService {
     }
 
     // Client roles only have access to their own client
-    if (user.clientId !== requestedClientId && user.client_id !== requestedClientId) {
+    if (user.clientId !== requestedClientId) {
       res.status(403).json({ message: "You don't have permission to access data for this client" });
       return;
     }

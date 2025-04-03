@@ -93,7 +93,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         const user = (req as any).user;
         if (user.role === UserRole.CLIENT_ADMIN) {
           if (userData.role !== UserRole.CLIENT_EXECUTIVE || 
-              (userData.client_id !== user.clientId && userData.client_id !== user.client_id)) {
+              (userData.client_id !== user.clientId)) {
             return res.status(403).json({ message: "You can only create client executive users for your client" });
           }
         }
@@ -124,19 +124,44 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         const user = (req as any).user;
         let users;
         
+        // Get BFAST users helper function
+        const getAllBfastUsers = async () => {
+          try {
+            // This is a temporary solution - in a real app we would add
+            // a proper method to the storage interface
+            const pool = (storage as any).implementation.pool;
+            if (!pool) return [];
+            
+            const result = await pool.query('SELECT * FROM users WHERE client_id IS NULL');
+            return result.rows || [];
+          } catch (error) {
+            console.error("Error fetching BFAST users:", error);
+            return [];
+          }
+        };
+        
         if (user.role === UserRole.CLIENT_ADMIN) {
           // Client admin can only see users for their client
-          const clientId = user.clientId || user.client_id;
+          const clientId = user.clientId;
           users = await storage.getUsersByClientId(clientId);
         } else {
           // Bfast admin can see all users
-          // For now, just return all users from memory storage
-          // In a real implementation, we would have a method to get all users
+          // We need a method to get all users from the database
+          // For now, let's get all users from all clients
+          const clients = await storage.getAllClients();
           const allUsers = [];
-          for (let i = 1; i < storage.currentUserId; i++) {
-            const user = await storage.getUser(i);
-            if (user) allUsers.push(user);
+          
+          // Add all users for each client
+          for (const client of clients) {
+            const clientUsers = await storage.getUsersByClientId(client.client_id);
+            allUsers.push(...clientUsers);
           }
+          
+          // Also add BFAST users (those without client_id)
+          // We need to implement this method in our storage
+          const bfastUsers = await getAllBfastUsers();
+          allUsers.push(...bfastUsers);
+          
           users = allUsers;
         }
         
@@ -188,7 +213,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         
         // If client user, only show their client
         if (user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) {
-          const clientId = user.clientId || user.client_id;
+          const clientId = user.clientId;
           const client = await storage.getClientByClientId(clientId);
           if (client) clients = [client];
         } else {
@@ -327,7 +352,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         
         // If client user, only show orders for their client
         if (user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) {
-          clientId = user.clientId || user.client_id;
+          clientId = user.clientId;
         }
         
         const pendingOrders = await storage.getPendingOrders(clientId);
@@ -349,7 +374,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         
         // If client user, only show orders for their client
         if (user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) {
-          clientId = user.clientId || user.client_id;
+          clientId = user.clientId;
         }
         
         const filter = req.query.status as string;
@@ -379,18 +404,19 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         
         // If client user, only show orders for their client
         if (user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) {
-          clientId = user.clientId || user.client_id;
+          clientId = user.clientId;
         }
         
         const allOrders = await storage.getAllOrders(clientId);
         
         // Count orders by status
-        const statusCounts = {
+        const statusCounts: Record<string, number> = {
           [OrderStatus.DELIVERED]: 0,
           [OrderStatus.RTO]: 0,
           [OrderStatus.INPROCESS]: 0,
           [OrderStatus.NDR]: 0,
           [OrderStatus.LOST]: 0,
+          [OrderStatus.PENDING]: 0,
           total: allOrders.length
         };
         
@@ -447,7 +473,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         // Check client access
         const user = (req as any).user;
         if ((user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE) && 
-            order.client_id !== user.clientId && order.client_id !== user.client_id) {
+            order.client_id !== user.clientId) {
           return res.status(403).json({ message: "You don't have permission to update this order" });
         }
         
@@ -507,7 +533,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
           for (const update of updates) {
             const order = await storage.getOrderByOrderId(update.orderId);
             
-            if (order && order.client_id !== user.clientId && order.client_id !== user.client_id) {
+            if (order && order.client_id !== user.clientId) {
               return res.status(403).json({ 
                 message: `You don't have permission to update order ${update.orderId}` 
               });

@@ -17,6 +17,7 @@ import AddClient from "@/pages/AddClient";
 import AddUser from "@/pages/AddUser";
 import PublicTrack from "@/pages/PublicTrack";
 import ShiprocketData from "@/pages/ShiprocketData";
+import ProfilePage from "@/pages/ProfilePage";
 import NotFound from "@/pages/not-found";
 
 // Layouts
@@ -119,6 +120,10 @@ function Router() {
           component={ShiprocketData} 
           roles={[UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE, UserRole.CLIENT_ADMIN]}
         />
+      </Route>
+
+      <Route path="/profile">
+        <ProtectedRoute component={ProfilePage} />
       </Route>
       
       {/* Root route */}

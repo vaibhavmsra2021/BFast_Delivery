@@ -1,6 +1,12 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { runMigrations } from "./migrations";
+import { PgStorage } from "./pgStorage";
+import { storage } from "./storage";
+
+// Set storage implementation to PostgreSQL
+storage.setImplementation(new PgStorage());
 
 const app = express();
 app.use(express.json());
@@ -37,6 +43,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Run database migrations
+  try {
+    await runMigrations();
+    log("Database migrations completed successfully");
+  } catch (error) {
+    log("Error running migrations: " + error);
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

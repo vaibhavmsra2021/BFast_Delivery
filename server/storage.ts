@@ -308,4 +308,117 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { PgStorage } from "./pgStorage";
+
+export class StorageManager implements IStorage {
+  private implementation: IStorage;
+
+  constructor() {
+    // Use PgStorage instead of MemStorage
+    this.implementation = new PgStorage();
+  }
+
+  // Set a new implementation at runtime
+  setImplementation(newImplementation: IStorage): void {
+    this.implementation = newImplementation;
+  }
+
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    return this.implementation.getUser(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return this.implementation.getUserByUsername(username);
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    return this.implementation.createUser(user);
+  }
+
+  async getUsersByClientId(clientId: string): Promise<User[]> {
+    return this.implementation.getUsersByClientId(clientId);
+  }
+
+  // Client operations
+  async getClient(id: number): Promise<Client | undefined> {
+    return this.implementation.getClient(id);
+  }
+
+  async getClientByClientId(clientId: string): Promise<Client | undefined> {
+    return this.implementation.getClientByClientId(clientId);
+  }
+
+  async createClient(client: InsertClient): Promise<Client> {
+    return this.implementation.createClient(client);
+  }
+
+  async updateClient(id: number, client: Partial<InsertClient>): Promise<Client> {
+    return this.implementation.updateClient(id, client);
+  }
+
+  async getAllClients(): Promise<Client[]> {
+    return this.implementation.getAllClients();
+  }
+
+  // Order operations
+  async getOrder(id: number): Promise<Order | undefined> {
+    return this.implementation.getOrder(id);
+  }
+
+  async getOrderByOrderId(orderId: string): Promise<Order | undefined> {
+    return this.implementation.getOrderByOrderId(orderId);
+  }
+
+  async getOrderByAWB(awb: string): Promise<Order | undefined> {
+    return this.implementation.getOrderByAWB(awb);
+  }
+
+  async createOrder(order: InsertOrder): Promise<Order> {
+    return this.implementation.createOrder(order);
+  }
+
+  async updateOrder(id: number, order: Partial<InsertOrder>): Promise<Order> {
+    return this.implementation.updateOrder(id, order);
+  }
+
+  async getPendingOrders(clientId?: string): Promise<Order[]> {
+    return this.implementation.getPendingOrders(clientId);
+  }
+
+  async getOrdersByStatus(status: string, clientId?: string): Promise<Order[]> {
+    return this.implementation.getOrdersByStatus(status, clientId);
+  }
+
+  async getAllOrders(clientId?: string): Promise<Order[]> {
+    return this.implementation.getAllOrders(clientId);
+  }
+
+  async assignAWB(orderIds: string[], awbs: string[]): Promise<void> {
+    return this.implementation.assignAWB(orderIds, awbs);
+  }
+
+  async bulkUpdateOrders(updates: Array<{ orderId: string, data: Partial<InsertOrder> }>): Promise<void> {
+    return this.implementation.bulkUpdateOrders(updates);
+  }
+
+  // Token blacklist operations
+  async addTokenToBlacklist(token: InsertToken): Promise<void> {
+    return this.implementation.addTokenToBlacklist(token);
+  }
+
+  async isTokenBlacklisted(token: string): Promise<boolean> {
+    return this.implementation.isTokenBlacklisted(token);
+  }
+
+  // Shiprocket CSV data operations
+  async saveShiprocketData(data: ShiprocketData[]): Promise<void> {
+    return this.implementation.saveShiprocketData(data);
+  }
+
+  async getShiprocketData(filters?: Record<string, string>): Promise<ShiprocketData[]> {
+    return this.implementation.getShiprocketData(filters);
+  }
+}
+
+export const storage = new StorageManager();

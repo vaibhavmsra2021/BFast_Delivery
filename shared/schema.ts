@@ -162,49 +162,7 @@ export type Order = typeof orders.$inferSelect;
 export type InsertToken = z.infer<typeof insertTokenSchema>;
 export type TokenBlacklist = typeof tokenBlacklist.$inferSelect;
 
-// Shiprocket data table
-export const shiprocketData = pgTable("shiprocket_data", {
-  id: serial("id").primaryKey(),
-  awb: text("awb"),
-  courier_type: text("courier_type"),
-  client_order_id: text("client_order_id"),
-  order_confirmation: text("order_confirmation"),
-  bfast_status: text("bfast_status"),
-  delivery_status: text("delivery_status"),
-  sale_channel: text("sale_channel"),
-  aggregator_partner: text("aggregator_partner"),
-  client_id: text("client_id"),
-  month: text("month"),
-  pickup_date: text("pickup_date"),
-  sale_order_number: text("sale_order_number"),
-  order_date: text("order_date"),
-  delivery_center_name: text("delivery_center_name"),
-  transport_mode: text("transport_mode"),
-  payment_mode: text("payment_mode"),
-  cod_amount: text("cod_amount"),
-  customer_first_name: text("customer_first_name"),
-  customer_last_name: text("customer_last_name"),
-  customer_email: text("customer_email"),
-  customer_phone: text("customer_phone"),
-  shipping_address: text("shipping_address"),
-  customer_alt_phone: text("customer_alt_phone"),
-  shipping_address_2: text("shipping_address_2"),
-  shipping_city: text("shipping_city"),
-  shipping_state: text("shipping_state"),
-  shipping_pincode: text("shipping_pincode"),
-  item_category: text("item_category"),
-  item_sku_code: text("item_sku_code"),
-  item_description: text("item_description"),
-  quantity: text("quantity"),
-  created_at: timestamp("created_at").defaultNow(),
-});
-
-export const insertShiprocketDataSchema = createInsertSchema(shiprocketData).omit({
-  id: true,
-  created_at: true
-});
-
-// Shiprocket CSV Data Schema for parsing the uploaded CSV
+// Shiprocket CSV Data Schema
 export const shiprocketDataSchema = z.object({
   awb: z.string().nullable(),
   courier_type: z.string().nullable(),
@@ -239,5 +197,4 @@ export const shiprocketDataSchema = z.object({
   quantity: z.string().nullable()
 });
 
-export type InsertShiprocketData = z.infer<typeof insertShiprocketDataSchema>;
-export type ShiprocketData = typeof shiprocketData.$inferSelect;
+export type ShiprocketData = z.infer<typeof shiprocketDataSchema>;

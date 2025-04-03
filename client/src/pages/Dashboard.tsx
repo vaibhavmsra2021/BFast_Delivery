@@ -15,19 +15,62 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 
+// Define types for our data structure
+interface OrderSummary {
+  statusCounts: {
+    total: number;
+    Delivered: number;
+    'In-Process': number;
+    RTO: number;
+    NDR: number;
+    Lost: number;
+    [key: string]: number;
+  };
+  pendingOrders: number;
+  regionData: {
+    [key: string]: number;
+  };
+}
+
+interface StatusChartItem {
+  name: string;
+  value: number;
+  percentage: number;
+  color: string;
+}
+
+interface RegionData {
+  name: string;
+  value: number;
+  opacity: number;
+}
+
 export default function Dashboard() {
   // Fetch order summary data
-  const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
+  const { data: summaryData, isLoading: isSummaryLoading } = useQuery<OrderSummary>({
     queryKey: ['/api/orders/summary'],
+    placeholderData: {
+      statusCounts: {
+        total: 0,
+        Delivered: 0,
+        'In-Process': 0,
+        RTO: 0,
+        NDR: 0,
+        Lost: 0
+      },
+      pendingOrders: 0,
+      regionData: {}
+    }
   });
 
   // Fetch recent orders
-  const { data: ordersData, isLoading: isOrdersLoading } = useQuery({
+  const { data: ordersData, isLoading: isOrdersLoading } = useQuery<any[]>({
     queryKey: ['/api/orders'],
+    placeholderData: []
   });
 
   // Transform summary data for status chart
-  const getStatusChartData = () => {
+  const getStatusChartData = (): StatusChartItem[] => {
     if (!summaryData?.statusCounts) return [];
     
     const total = summaryData.statusCounts.total || 1; // Avoid division by zero
@@ -67,29 +110,61 @@ export default function Dashboard() {
   };
 
   // Transform region data for the map
-  const getRegionData = () => {
+  const getRegionData = (): RegionData[] => {
     if (!summaryData?.regionData) return [];
     
     return Object.entries(summaryData.regionData).map(([name, value], index) => ({
       name,
-      value,
+      value: Number(value), // Ensure the value is a number
       opacity: 0.9 - (index * 0.1) // Decrease opacity for each region
     }));
   };
 
+  // Define type for recent orders to match the Order interface in RecentOrders component
+  interface RecentOrder {
+    id: string;
+    orderId: string;
+    customer: string;
+    date: string;
+    status: "Delivered" | "In Transit" | "NDR" | "RTO" | "Lost";
+    awb: string;
+    amount: string;
+  }
+
   // Transform recent orders for display
-  const getRecentOrders = () => {
-    if (!ordersData) return [];
+  const getRecentOrders = (): RecentOrder[] => {
+    if (!ordersData || ordersData.length === 0) return [];
     
-    return ordersData.slice(0, 5).map((order: any) => ({
-      id: order.id,
-      orderId: `#${order.order_id.substring(0, 8)}`,
-      customer: order.shipping_details.name,
-      date: format(new Date(order.created_at), 'MMM dd, yyyy'),
-      status: order.delivery_status || order.fulfillment_status,
-      awb: order.awb || '-',
-      amount: `₹${order.shipping_details.amount.toFixed(2)}`
-    }));
+    return ordersData.slice(0, 5).map((order: any) => {
+      // Calculate order amount from product_details if available
+      let amount = '₹0.00';
+      if (order.product_details && Array.isArray(order.product_details)) {
+        const totalAmount = order.product_details.reduce((sum: number, product: any) => {
+          return sum + (product.total || 0);
+        }, 0);
+        amount = `₹${totalAmount.toFixed(2)}`;
+      }
+      
+      // Convert status to one of the allowed values in the RecentOrder type
+      let status: RecentOrder['status'] = "In Transit"; // Default value
+      const rawStatus = order.delivery_status || order.fulfillment_status || '';
+      
+      if (rawStatus.includes("Delivered")) status = "Delivered";
+      else if (rawStatus.includes("RTO") || rawStatus.includes("Return")) status = "RTO";
+      else if (rawStatus.includes("NDR")) status = "NDR";
+      else if (rawStatus.includes("Lost")) status = "Lost";
+      else status = "In Transit";
+      
+      return {
+        id: String(order.id), // Convert ID to string 
+        orderId: `#${order.order_id.substring(0, 8)}`,
+        customer: order.shipping_details?.customer_name || 'Unknown Customer',
+        date: format(new Date(order.created_at), 'MMM dd, yyyy'),
+        status: status,
+        awb: order.awb || '-',
+        amount: amount
+      };
+    });
   };
 
   const statusChartData = getStatusChartData();

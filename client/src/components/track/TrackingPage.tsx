@@ -239,7 +239,7 @@ export function TrackingPage({ trackingInfo, isLoading, error }: TrackingPagePro
                 </h3>
                 <p className="font-medium">{trackingInfo.order.product_name}</p>
                 <p className="text-neutral-700">Quantity: {trackingInfo.order.quantity}</p>
-                <p className="text-neutral-700">Amount: ₹{trackingInfo.order.amount.toFixed(2)}</p>
+                <p className="text-neutral-700">Amount: ₹{(trackingInfo.order.amount || 0).toFixed(2)}</p>
               </div>
             </div>
 

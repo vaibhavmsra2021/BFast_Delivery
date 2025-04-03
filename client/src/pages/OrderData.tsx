@@ -47,38 +47,57 @@ export default function OrderData() {
 
   // Transform orders for display
   const transformOrders = (orders: any[] = []) => {
-    return orders.map((order) => ({
-      id: order.id,
-      orderId: `#${order.order_id.substring(0, 8)}`,
-      customer: {
-        name: order.shipping_details.name,
-        phone: order.shipping_details.phone_1,
-        email: order.shipping_details.email,
-      },
-      date: format(new Date(order.created_at), 'MMM dd, yyyy'),
-      status: order.delivery_status || order.fulfillment_status,
-      awb: order.awb || '',
-      courier: order.courier || '',
-      amount: `₹${order.shipping_details.amount.toFixed(2)}`,
-      paymentMode: order.shipping_details.payment_mode,
-      product: {
-        name: order.product_details.product_name,
-        quantity: order.product_details.quantity,
-      },
-      shippingAddress: {
-        address: order.shipping_details.address,
-        city: order.shipping_details.city,
-        state: order.shipping_details.state,
-        pincode: order.shipping_details.pincode,
-      },
-      dimensions: order.product_details.dimensions,
-      weight: order.product_details.weight,
-      lastUpdate: {
-        timestamp: order.last_timestamp ? format(new Date(order.last_timestamp), 'MMM dd, yyyy HH:mm') : '',
-        location: order.last_scan_location || '',
-        remark: order.last_remark || '',
-      },
-    }));
+    return orders.map((order) => {
+      // Calculate order amount from product_details if available
+      let amount = '₹0.00';
+      if (order.product_details && Array.isArray(order.product_details)) {
+        const totalAmount = order.product_details.reduce((sum: number, product: any) => {
+          return sum + (product.total || 0);
+        }, 0);
+        amount = `₹${totalAmount.toFixed(2)}`;
+      }
+      
+      return {
+        id: order.id,
+        orderId: `#${order.order_id.substring(0, 8)}`,
+        customer: {
+          name: order.shipping_details?.customer_name || 'Unknown Customer',
+          phone: order.shipping_details?.customer_phone || '',
+          email: order.shipping_details?.customer_email || '',
+        },
+        date: format(new Date(order.created_at), 'MMM dd, yyyy'),
+        status: order.delivery_status || order.fulfillment_status,
+        awb: order.awb || '',
+        courier: order.courier || '',
+        amount: amount,
+        paymentMode: order.shipping_details?.payment_mode || 'Unknown',
+        product: {
+          name: Array.isArray(order.product_details) && order.product_details.length > 0 
+            ? order.product_details[0].name 
+            : 'Unknown Product',
+          quantity: Array.isArray(order.product_details) && order.product_details.length > 0 
+            ? order.product_details[0].quantity 
+            : 0,
+        },
+        shippingAddress: {
+          address: order.shipping_details?.address || '',
+          city: order.shipping_details?.city || '',
+          state: order.shipping_details?.state || '',
+          pincode: order.shipping_details?.pin_code || '',
+        },
+        dimensions: Array.isArray(order.product_details) && order.product_details.length > 0 
+          ? order.product_details[0].dimensions || '' 
+          : '',
+        weight: Array.isArray(order.product_details) && order.product_details.length > 0 
+          ? order.product_details[0].weight || '' 
+          : '',
+        lastUpdate: {
+          timestamp: order.last_timestamp ? format(new Date(order.last_timestamp), 'MMM dd, yyyy HH:mm') : '',
+          location: order.last_scan_location || '',
+          remark: order.last_remark || '',
+        },
+      };
+    });
   };
 
   const handleFilterChange = (newFilters: OrderFilters) => {

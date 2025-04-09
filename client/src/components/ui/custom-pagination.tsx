@@ -1,67 +1,104 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 
-export interface PaginationProps {
+interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  showNavigationLabels?: boolean;
 }
 
-export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
-  // No pagination needed if there's only one page
-  if (totalPages <= 1) return null;
-
-  // Generate array of visible page numbers
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  showNavigationLabels = false,
+}: PaginationProps) {
+  // Generate page numbers to display
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5;
     
-    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-    let endPage = startPage + maxPagesToShow - 1;
+    // Always show first page
+    pageNumbers.push(1);
     
-    if (endPage > totalPages) {
-      endPage = totalPages;
-      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    // Current page neighborhood
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      if (pageNumbers.indexOf(i) === -1) {
+        pageNumbers.push(i);
+      }
     }
     
-    for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i);
+    // Always show last page if there is more than one page
+    if (totalPages > 1) {
+      pageNumbers.push(totalPages);
     }
     
-    return pageNumbers;
+    // Add ellipses
+    const result = [];
+    let prev = 0;
+    
+    for (const num of pageNumbers) {
+      if (num - prev > 1) {
+        result.push(-1); // -1 represents ellipsis
+      }
+      result.push(num);
+      prev = num;
+    }
+    
+    return result;
   };
-  
+
   const pageNumbers = getPageNumbers();
-  
+
   return (
-    <div className="flex items-center justify-center space-x-2">
+    <div className="flex items-center space-x-2">
       <Button
         variant="outline"
         size="icon"
         onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
+        aria-label="Previous page"
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
       
-      {pageNumbers.map((page) => (
-        <Button
-          key={page}
-          variant={currentPage === page ? "default" : "outline"}
-          size="sm"
-          onClick={() => onPageChange(page)}
-          className="min-w-[2rem]"
-        >
-          {page}
-        </Button>
-      ))}
+      {showNavigationLabels && <div className="text-sm text-muted-foreground">Previous</div>}
+      
+      <div className="flex items-center">
+        {pageNumbers.map((pageNumber, index) => 
+          pageNumber === -1 ? (
+            <Button
+              key={`ellipsis-${index}`}
+              variant="ghost"
+              size="icon"
+              disabled
+              className="text-muted-foreground px-2"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              key={pageNumber}
+              variant={pageNumber === currentPage ? "default" : "outline"}
+              size="icon"
+              onClick={() => pageNumber !== currentPage && onPageChange(pageNumber)}
+              className="h-8 w-8"
+            >
+              {pageNumber}
+            </Button>
+          )
+        )}
+      </div>
+      
+      {showNavigationLabels && <div className="text-sm text-muted-foreground">Next</div>}
       
       <Button
         variant="outline"
         size="icon"
         onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
+        aria-label="Next page"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>

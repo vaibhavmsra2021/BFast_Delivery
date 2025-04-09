@@ -69,6 +69,23 @@ export class ShiprocketApiService {
   constructor() {}
 
   /**
+   * Test authentication with provided credentials
+   */
+  async testAuthentication(email: string, password: string): Promise<boolean> {
+    try {
+      const response = await axios.post<ShiprocketAuthResponse>(
+        `${this.baseUrl}/auth/login`,
+        { email, password }
+      );
+      
+      return !!response.data.token;
+    } catch (error) {
+      console.error('Error testing authentication with Shiprocket:', error);
+      throw new Error('Failed to authenticate with Shiprocket: Invalid credentials');
+    }
+  }
+
+  /**
    * Authenticate with Shiprocket API and get token
    */
   private async authenticate(): Promise<string> {

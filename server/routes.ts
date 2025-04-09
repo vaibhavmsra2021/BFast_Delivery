@@ -273,27 +273,19 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     authService.authenticate,
     async (req: Request, res: Response) => {
       try {
-        const { shiprocket_api_key } = req.body;
+        const { shiprocket_email, shiprocket_password } = req.body;
         
-        if (!shiprocket_api_key) {
-          return res.status(400).json({ message: "Missing required Shiprocket API key" });
+        if (!shiprocket_email || !shiprocket_password) {
+          return res.status(400).json({ message: "Missing required Shiprocket credentials" });
         }
         
-        // Create a temporary client to test the connection
-        const tempClient = {
-          client_id: "temp-test-client",
-          client_name: "Temporary Test Client",
-          shopify_store_id: "not-needed-for-test",
-          shopify_api_key: "not-needed-for-test",
-          shopify_api_secret: "not-needed-for-test",
-          shiprocket_api_key
-        };
-        
-        // Use the shiprocket service to test the connection
+        // Use the shiprocket API service to test the connection
         try {
-          // In a real implementation, we would make an actual API call
-          // For this test, we'll just check if the API accepts our key by attempting to track a dummy AWB
-          await shiprocketService.getTrackingInfo("DUMMY-AWB-123", tempClient.client_id);
+          // Create a temporary instance of the ShiprocketApiService with the provided credentials
+          const tempShiprocketApi = new ShiprocketApiService();
+          
+          // Test authentication with the provided credentials
+          await tempShiprocketApi.testAuthentication(shiprocket_email, shiprocket_password);
           
           res.json({ success: true, message: "Successfully connected to Shiprocket" });
         } catch (error) {

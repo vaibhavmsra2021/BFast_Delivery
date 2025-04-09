@@ -4,6 +4,8 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { StatusChart } from "@/components/dashboard/StatusChart";
 import { IndiaMap } from "@/components/dashboard/IndiaMap";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
+import { ShiprocketOrdersList } from "@/components/dashboard/ShiprocketOrdersList";
+import { useAuth, UserRole } from "@/lib/auth";
 import { 
   Package, 
   Clock, 
@@ -170,6 +172,10 @@ export default function Dashboard() {
   const statusChartData = getStatusChartData();
   const regionData = getRegionData();
   const recentOrders = getRecentOrders();
+  
+  // Check if user has access to Shiprocket orders
+  const { user } = useAuth();
+  const canViewShiprocketOrders = user?.role === UserRole.BFAST_ADMIN || user?.role === UserRole.BFAST_EXECUTIVE;
 
   return (
     <div className="py-6">
@@ -255,6 +261,13 @@ export default function Dashboard() {
             isLoading={isOrdersLoading}
           />
         </div>
+
+        {/* Shiprocket Orders */}
+        {canViewShiprocketOrders && (
+          <div className="mt-8">
+            <ShiprocketOrdersList maxItems={5} />
+          </div>
+        )}
       </div>
     </div>
   );

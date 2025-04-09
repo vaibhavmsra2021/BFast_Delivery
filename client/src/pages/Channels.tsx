@@ -69,7 +69,8 @@ const shopifyConnectionSchema = z.object({
 
 // Schema for the Shiprocket connection form
 const shiprocketConnectionSchema = z.object({
-  shiprocket_api_key: z.string().min(5, "API key is required"),
+  shiprocket_email: z.string().email("Valid email is required"),
+  shiprocket_password: z.string().min(5, "Password is required"),
 });
 
 // Schema for creating a new client
@@ -79,7 +80,8 @@ const newClientSchema = z.object({
   shopify_store_id: z.string().min(2, "Store ID is required"),
   shopify_api_key: z.string().min(5, "API key is required"),
   shopify_api_secret: z.string().min(5, "API secret is required"),
-  shiprocket_api_key: z.string().min(5, "API key is required"),
+  shiprocket_email: z.string().email("Valid email is required"),
+  shiprocket_password: z.string().min(5, "Password is required"),
   logo_url: z.string().optional(),
 });
 
@@ -120,7 +122,8 @@ export default function Channels() {
   const shiprocketForm = useForm<z.infer<typeof shiprocketConnectionSchema>>({
     resolver: zodResolver(shiprocketConnectionSchema),
     defaultValues: {
-      shiprocket_api_key: "",
+      shiprocket_email: "",
+      shiprocket_password: "",
     },
   });
 
@@ -133,7 +136,8 @@ export default function Channels() {
       shopify_store_id: "",
       shopify_api_key: "",
       shopify_api_secret: "",
-      shiprocket_api_key: "",
+      shiprocket_email: "",
+      shiprocket_password: "",
       logo_url: "",
     },
   });
@@ -153,7 +157,8 @@ export default function Channels() {
   const handleEditShiprocket = (client: any) => {
     setCurrentClientId(client.client_id);
     shiprocketForm.reset({
-      shiprocket_api_key: client.shiprocket_api_key,
+      shiprocket_email: client.shiprocket_email || "",
+      shiprocket_password: "",  // Don't prefill password for security reasons
     });
     setIsEditShiprocketOpen(true);
   };
@@ -443,19 +448,35 @@ export default function Channels() {
                             
                             <div className="space-y-4">
                               <h4 className="text-sm font-medium">Shiprocket Credentials</h4>
-                              <FormField
-                                control={newClientForm.control}
-                                name="shiprocket_api_key"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>API Key</FormLabel>
-                                    <FormControl>
-                                      <Input type="password" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                              <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                  control={newClientForm.control}
+                                  name="shiprocket_email"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Email</FormLabel>
+                                      <FormControl>
+                                        <Input type="email" placeholder="email@example.com" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                
+                                <FormField
+                                  control={newClientForm.control}
+                                  name="shiprocket_password"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Password</FormLabel>
+                                      <FormControl>
+                                        <Input type="password" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
                             </div>
                             
                             <FormField
@@ -713,7 +734,7 @@ export default function Channels() {
               <CardHeader>
                 <CardTitle>Shiprocket Connections</CardTitle>
                 <CardDescription>
-                  Manage your Shiprocket API keys for shipment tracking
+                  Manage your Shiprocket account credentials for shipment tracking
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -743,7 +764,7 @@ export default function Channels() {
                             <TableCell className="font-medium">{client.client_name}</TableCell>
                             <TableCell>{format(new Date(client.created_at), 'MMM dd, yyyy')}</TableCell>
                             <TableCell>
-                              {client.shiprocket_api_key ? (
+                              {client.shiprocket_email ? (
                                 <Badge className="bg-green-100 text-green-800">
                                   <CheckCircle className="h-3 w-3 mr-1" />
                                   Active
@@ -784,7 +805,7 @@ export default function Channels() {
                     <DialogHeader>
                       <DialogTitle>Edit Shiprocket Connection</DialogTitle>
                       <DialogDescription>
-                        Update your Shiprocket API key for shipment tracking
+                        Update your Shiprocket credentials for shipment tracking
                       </DialogDescription>
                     </DialogHeader>
                     
@@ -792,15 +813,32 @@ export default function Channels() {
                       <form onSubmit={shiprocketForm.handleSubmit(onShiprocketSubmit)} className="space-y-6 py-4">
                         <FormField
                           control={shiprocketForm.control}
-                          name="shiprocket_api_key"
+                          name="shiprocket_email"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>API Key</FormLabel>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input type="email" {...field} />
+                              </FormControl>
+                              <FormDescription>
+                                Your Shiprocket account email
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={shiprocketForm.control}
+                          name="shiprocket_password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Password</FormLabel>
                               <FormControl>
                                 <Input type="password" {...field} />
                               </FormControl>
                               <FormDescription>
-                                Your Shiprocket authentication token
+                                Your Shiprocket account password
                               </FormDescription>
                               <FormMessage />
                             </FormItem>

@@ -177,13 +177,12 @@ export class ShiprocketApiService {
    */
   async getAllOrders(page = 1, pageSize = 20): Promise<ShiprocketOrdersResponse> {
     try {
-      // Let's try with the regular 'orders' endpoint first
+      // Direct API approach using the new format you shared
       try {
         const headers = await this.getHeaders();
-        console.log('Attempting to fetch orders using standard endpoint with parameters:',
-          { page, pageSize, headers: { 'Authorization': 'Bearer [REDACTED]' } });
+        console.log('Attempting to fetch orders from direct API with your format');
         
-        const response = await axios.get<ShiprocketOrdersResponse>(
+        const response = await axios.get(
           `${this.baseUrl}/orders`,
           { 
             headers,
@@ -191,21 +190,62 @@ export class ShiprocketApiService {
               page,
               per_page: pageSize,
               sort: 'created_at',
-              direction: 'desc' // Use direction parameter for order direction
+              direction: 'desc'
             }
           }
         );
         
-        console.log('Successfully fetched orders from Shiprocket API with status:', response.status);
+        console.log('Successfully fetched from Shiprocket API with status:', response.status);
         
+        // Check if data is in the format from your example (an array directly in data field)
+        if (response.data && Array.isArray(response.data.data)) {
+          console.log(`Found ${response.data.data.length} orders in array format`);
+          
+          // Transform the data to match our expected format
+          const transformedData = {
+            data: {
+              orders: response.data.data.map((order: any) => ({
+                id: order.id || 0,
+                order_id: order.channel_order_id || String(order.id),
+                order_number: order.channel_order_id || String(order.id),
+                channel_order_id: order.channel_order_id || '',
+                channel: order.channel_name || 'Custom',
+                order_date: order.created_at || new Date().toISOString(),
+                pickup_date: null,
+                status: order.status || 'unfulfilled',
+                status_code: order.status_code || 1,
+                awb_code: order.awb || order.last_mile_awb || '',
+                courier_name: order.courier_name || order.last_mile_courier_name || 'Unknown',
+                payment_method: order.payment_method || 'COD',
+                total: order.total || '0',
+                billing_customer_name: order.customer_name || '',
+                shipping_customer_name: order.customer_name || '',
+                shipping_address: order.customer_address || '',
+                shipping_city: order.customer_city || '',
+                shipping_state: order.customer_state || '',
+                shipping_country: order.customer_country || 'India',
+                shipping_pincode: order.customer_pincode || ''
+              })),
+              total_pages: Math.ceil(response.data.data.length / pageSize) || 1,
+              current_page: page || 1,
+              from: 1,
+              to: response.data.data.length,
+              total: response.data.data.length
+            }
+          };
+          
+          return transformedData as ShiprocketOrdersResponse;
+        }
+        
+        // Try standard format as fallback
         if (response.data && response.data.data && response.data.data.orders) {
-          console.log(`Found ${response.data.data.orders.length} orders`);
+          console.log(`Found ${response.data.data.orders.length} orders in standard format`);
           return response.data;
         } else {
           console.log('No orders found in standard response or unexpected structure');
         }
-      } catch (standardEndpointError) {
-        console.error('Error with standard endpoint, trying alternative approach');
+      } catch (directApiError) {
+        console.error('Error with direct API:', directApiError);
       }
       
       // If the above fails, let's try the "shipments" endpoint instead, which might be more reliable
@@ -220,7 +260,6 @@ export class ShiprocketApiService {
             params: {
               page,
               per_page: pageSize,
-              // The Shiprocket API expects direction to be "asc" or "desc", not sort_by
               sort: 'created_at',
               direction: 'desc'
             }

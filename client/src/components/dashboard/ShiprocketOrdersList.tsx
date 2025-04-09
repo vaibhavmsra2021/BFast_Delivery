@@ -60,12 +60,11 @@ export function ShiprocketOrdersList({ maxItems = 5 }: ShiprocketOrdersListProps
     source?: 'api' | 'database'
   }>({
     queryKey: ['/api/shiprocket/all-orders', page, pageSize],
-    queryFn: () => 
-      fetch(`/api/shiprocket/all-orders?page=${page}&pageSize=${pageSize}`)
-        .then(res => {
-          if (!res.ok) throw new Error('Failed to fetch orders');
-          return res.json();
-        }),
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/shiprocket/all-orders?page=${page}&pageSize=${pageSize}`);
+      if (!response.ok) throw new Error('Failed to fetch orders');
+      return response.json();
+    },
     refetchInterval: autoRefresh ? 30000 : false, // Refresh every 30 seconds if autoRefresh is enabled
   });
   

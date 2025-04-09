@@ -539,8 +539,55 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
         const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 20;
         
-        const orders = await shiprocketApiService.getOrders(page, pageSize);
-        res.json(orders);
+        try {
+          // First try to get data from Shiprocket API
+          const orders = await shiprocketApiService.getOrders(page, pageSize);
+          // If successful, return the data
+          return res.json(orders);
+        } catch (apiError) {
+          console.warn("Shiprocket API unavailable, falling back to database:", apiError);
+          
+          // If API fails, get orders from our database that are from Shiprocket
+          const dbOrders = await storage.getOrdersByClientId('SHIPROCKET');
+          
+          // Format database orders to match Shiprocket API response format
+          const formattedOrders = dbOrders.map(order => ({
+            id: order.id,
+            order_id: order.order_id,
+            order_number: order.order_id,
+            channel_order_id: order.order_id,
+            channel: order.shopify_store_id,
+            order_date: order.created_at?.toISOString() || new Date().toISOString(),
+            pickup_date: order.pickup_date?.toISOString() || new Date().toISOString(),
+            status: order.fulfillment_status,
+            status_code: 1,
+            awb_code: order.awb || '',
+            courier_name: 'Unknown',
+            payment_method: order.shipping_details?.payment_mode || 'COD',
+            total: String(order.shipping_details?.amount || 0),
+            billing_customer_name: order.shipping_details?.name || 'Customer',
+            shipping_customer_name: order.shipping_details?.name || 'Customer',
+            shipping_address: order.shipping_details?.address || '',
+            shipping_city: order.shipping_details?.city || '',
+            shipping_state: order.shipping_details?.state || '',
+            shipping_country: order.shipping_details?.country || 'India',
+            shipping_pincode: order.shipping_details?.pincode || '',
+          }));
+          
+          // Paginate the data
+          const startIndex = (page - 1) * pageSize;
+          const endIndex = startIndex + pageSize;
+          const paginatedOrders = formattedOrders.slice(startIndex, endIndex);
+          
+          // Return the fallback data in the same format as the Shiprocket API
+          return res.json({
+            data: {
+              orders: paginatedOrders,
+              total_pages: Math.ceil(formattedOrders.length / pageSize),
+              current_page: page,
+            }
+          });
+        }
       } catch (error) {
         console.error("Get Shiprocket orders error:", error);
         res.status(500).json({ 

@@ -239,10 +239,28 @@ export class ShiprocketApiService {
     try {
       // Get orders from Shiprocket
       const shiprocketOrdersData = await this.getOrders(1, 100);
+      
+      // Check if we have valid data
+      if (!shiprocketOrdersData || !shiprocketOrdersData.data || !shiprocketOrdersData.data.orders) {
+        console.warn('No orders data returned from Shiprocket API');
+        return;
+      }
+      
       const shiprocketOrders = shiprocketOrdersData.data.orders;
+      
+      // Additional safety check
+      if (!Array.isArray(shiprocketOrders)) {
+        console.warn('Orders data from Shiprocket is not an array:', shiprocketOrders);
+        return;
+      }
       
       // For each order, check if it exists in our database
       for (const order of shiprocketOrders) {
+        if (!order.awb_code) {
+          console.warn('Skipping order without AWB code:', order.order_id);
+          continue;
+        }
+        
         // Check if order exists by AWB
         const existingOrder = await storage.getOrderByAWB(order.awb_code);
         
@@ -252,19 +270,19 @@ export class ShiprocketApiService {
           const newOrder = {
             client_id: 'SHIPROCKET', // Default client ID for Shiprocket orders
             shopify_store_id: order.channel || 'shiprocket',
-            order_id: order.order_id,
+            order_id: order.order_id || String(order.id),
             awb: order.awb_code,
             fulfillment_status: this.mapShiprocketStatusToOurStatus(order.status),
             shipping_details: {
-              name: order.shipping_customer_name,
-              email: order.shipping_email,
-              phone_1: order.shipping_phone,
-              address: order.shipping_address,
-              city: order.shipping_city,
-              state: order.shipping_state,
-              country: order.shipping_country,
-              pincode: order.shipping_pincode,
-              payment_mode: order.payment_method,
+              name: order.shipping_customer_name || '',
+              email: order.shipping_email || '',
+              phone_1: order.shipping_phone || '',
+              address: order.shipping_address || '',
+              city: order.shipping_city || '',
+              state: order.shipping_state || '',
+              country: order.shipping_country || 'India',
+              pincode: order.shipping_pincode || '',
+              payment_mode: order.payment_method || 'COD',
               shipping_method: 'Standard', // Default shipping method
               amount: parseFloat(order.total) || 0
             },
@@ -273,11 +291,11 @@ export class ShiprocketApiService {
               category: 'Default',
               quantity: 1, // Default quantity
               price: parseFloat(order.subtotal) || 0,
-              dimensions: [10, 10, 10], // Default dimensions [length, width, height]
+              dimensions: [10, 10, 10] as [number, number, number], // Default dimensions [length, width, height]
               weight: 0.5 // Default weight in kg
             },
-            pickup_date: order.pickup_date,
-            created_at: new Date(order.order_date)
+            pickup_date: order.pickup_date || null,
+            created_at: order.order_date ? new Date(order.order_date) : new Date()
           };
           
           await storage.createOrder(newOrder);

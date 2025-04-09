@@ -32,6 +32,7 @@ export interface IStorage {
   getPendingOrders(clientId?: string): Promise<Order[]>;
   getOrdersByStatus(status: string, clientId?: string): Promise<Order[]>;
   getAllOrders(clientId?: string): Promise<Order[]>;
+  getOrdersByClientId(clientId: string): Promise<Order[]>;
   assignAWB(orderIds: string[], awbs: string[]): Promise<void>;
   bulkUpdateOrders(updates: Array<{ orderId: string, data: Partial<InsertOrder> }>): Promise<void>;
   
@@ -243,6 +244,12 @@ export class MemStorage implements IStorage {
     );
   }
   
+  async getOrdersByClientId(clientId: string): Promise<Order[]> {
+    return Array.from(this.orders.values()).filter(order =>
+      order.client_id === clientId
+    );
+  }
+  
   async assignAWB(orderIds: string[], awbs: string[]): Promise<void> {
     if (orderIds.length !== awbs.length) {
       throw new Error("The number of order IDs and AWBs must match");
@@ -400,6 +407,10 @@ export class StorageManager implements IStorage {
   }
 
   async getAllOrders(clientId?: string): Promise<Order[]> {
+    return this.implementation.getAllOrders(clientId);
+  }
+  
+  async getOrdersByClientId(clientId: string): Promise<Order[]> {
     return this.implementation.getAllOrders(clientId);
   }
 

@@ -13,7 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/custom-pagination';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Truck, RefreshCcw } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Truck, RefreshCcw, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -48,6 +49,7 @@ export function ShiprocketOrdersList({ maxItems = 5 }: ShiprocketOrdersListProps
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(maxItems);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   const { data, isLoading, refetch } = useQuery<{
     data: {
@@ -63,7 +65,26 @@ export function ShiprocketOrdersList({ maxItems = 5 }: ShiprocketOrdersListProps
           if (!res.ok) throw new Error('Failed to fetch orders');
           return res.json();
         }),
+    refetchInterval: autoRefresh ? 30000 : false, // Refresh every 30 seconds if autoRefresh is enabled
   });
+  
+  // Set up auto-refresh on component mount
+  React.useEffect(() => {
+    // Initial refresh
+    refetch();
+    
+    // Create an interval for periodic refresh
+    const intervalId = setInterval(() => {
+      if (autoRefresh) {
+        refetch();
+      }
+    }, 30000); // Refresh every 30 seconds
+    
+    // Cleanup on unmount
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [autoRefresh, refetch]);
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -118,25 +139,43 @@ export function ShiprocketOrdersList({ maxItems = 5 }: ShiprocketOrdersListProps
             Latest orders from Shiprocket
           </CardDescription>
         </div>
-        <Button 
-          onClick={handleSyncOrders}
-          disabled={isSyncing}
-          size="sm"
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          {isSyncing ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Syncing...
-            </>
-          ) : (
-            <>
-              <RefreshCcw className="h-4 w-4" />
-              Sync
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-gray-500" />
+            <div className="flex items-center space-x-2">
+              <Switch 
+                id="auto-refresh" 
+                checked={autoRefresh} 
+                onCheckedChange={setAutoRefresh} 
+              />
+              <label
+                htmlFor="auto-refresh"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Auto-refresh
+              </label>
+            </div>
+          </div>
+          <Button 
+            onClick={handleSyncOrders}
+            disabled={isSyncing}
+            size="sm"
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            {isSyncing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Syncing...
+              </>
+            ) : (
+              <>
+                <RefreshCcw className="h-4 w-4" />
+                Sync
+              </>
+            )}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (

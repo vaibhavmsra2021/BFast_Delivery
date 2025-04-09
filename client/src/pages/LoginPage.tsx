@@ -60,26 +60,20 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      console.log('Submitting login form with username:', data.username);
       await login(data.username, data.password);
-      
       toast({
         title: "Login Successful",
         description: "Welcome to Bfast Shipment Management",
       });
-      
-      // Add a short delay for the token to be stored in local storage
-      console.log('Login successful, redirecting to dashboard...');
-      setTimeout(() => {
-        window.location.href = "/home"; // Use direct navigation to force reload
-      }, 300);
+      setLocation("/home");
     } catch (err) {
-      console.error("Login form error:", err);
+      console.error("Login error:", err);
       setError(
         err instanceof Error
           ? err.message
           : "Invalid username or password. Please try again."
       );
+    } finally {
       setIsLoading(false);
     }
   };
@@ -98,17 +92,13 @@ export default function LoginPage() {
           <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
-
         </CardHeader>
         <CardContent>
           {error && (
-            <>
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-
-            </>
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           <Form {...form}>

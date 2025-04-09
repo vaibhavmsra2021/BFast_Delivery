@@ -3,16 +3,8 @@ import { OrderFilters } from "@/components/orders/OrderFilter";
 
 // Auth API
 export const loginUser = async (username: string, password: string) => {
-  try {
-    console.log('Attempting login with username:', username);
-    const response = await apiRequest('POST', '/api/auth/login', { username, password });
-    const data = await response.json();
-    console.log('Login successful, token received');
-    return data;
-  } catch (error) {
-    console.error('Login error:', error);
-    throw error;
-  }
+  const response = await apiRequest('POST', '/api/auth/login', { username, password });
+  return response.json();
 };
 
 // Users API

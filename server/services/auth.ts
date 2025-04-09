@@ -4,12 +4,8 @@ import { UserRole, User } from "@shared/schema";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
-// JWT Secret from environment variables
+// JWT Secret - should be in environment variables
 const JWT_SECRET = process.env.JWT_SECRET || "shopify-order-management-secret";
-// For better security, always use the environment variable in production
-if (!process.env.JWT_SECRET) {
-  console.warn("WARNING: JWT_SECRET environment variable not set, using default secret. This is insecure for production.");
-}
 const JWT_EXPIRY = "24h";
 
 export class AuthService {
@@ -29,17 +25,7 @@ export class AuthService {
 
   // Verify token
   verifyToken(token: string): any {
-    try {
-      return jwt.verify(token, JWT_SECRET);
-    } catch (error) {
-      console.error('Token verification error:', error);
-      if (error instanceof jwt.TokenExpiredError) {
-        throw new Error('Token has expired');
-      } else if (error instanceof jwt.JsonWebTokenError) {
-        throw new Error('Invalid token');
-      }
-      throw error;
-    }
+    return jwt.verify(token, JWT_SECRET);
   }
 
   // Hash password
@@ -108,12 +94,7 @@ export class AuthService {
       (req as any).user = decoded;
       next();
     } catch (error) {
-      console.error('Authentication middleware error:', error);
-      if (error instanceof Error) {
-        res.status(401).json({ message: error.message || "Invalid or expired token" });
-      } else {
-        res.status(401).json({ message: "Invalid or expired token" });
-      }
+      res.status(401).json({ message: "Invalid or expired token" });
     }
   };
 

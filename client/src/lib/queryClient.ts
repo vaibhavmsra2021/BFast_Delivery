@@ -13,7 +13,16 @@ function getAuthToken(): string | null {
     const authStorage = localStorage.getItem('auth-storage');
     if (authStorage) {
       const parsed = JSON.parse(authStorage);
-      return parsed?.state?.token || null;
+      const token = parsed?.state?.token || null;
+      
+      // Add some debug information for token issues
+      if (!token) {
+        console.warn('No auth token found in storage');
+      } else {
+        console.info('Auth token found in storage');
+      }
+      
+      return token;
     }
   } catch (e) {
     console.error('Error retrieving auth token:', e);

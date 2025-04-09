@@ -60,20 +60,26 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      console.log('Submitting login form with username:', data.username);
       await login(data.username, data.password);
+      
       toast({
         title: "Login Successful",
         description: "Welcome to Bfast Shipment Management",
       });
-      setLocation("/home");
+      
+      // Add a short delay for the token to be stored in local storage
+      console.log('Login successful, redirecting to dashboard...');
+      setTimeout(() => {
+        window.location.href = "/home"; // Use direct navigation to force reload
+      }, 300);
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Login form error:", err);
       setError(
         err instanceof Error
           ? err.message
           : "Invalid username or password. Please try again."
       );
-    } finally {
       setIsLoading(false);
     }
   };

@@ -17,6 +17,7 @@ import AddClient from "@/pages/AddClient";
 import AddUser from "@/pages/AddUser";
 import PublicTrack from "@/pages/PublicTrack";
 import ShiprocketData from "@/pages/ShiprocketData";
+import ShiprocketApiData from "@/pages/ShiprocketApiData";
 import ProfilePage from "@/pages/ProfilePage";
 import NotFound from "@/pages/not-found";
 
@@ -119,6 +120,13 @@ function Router() {
         <ProtectedRoute 
           component={ShiprocketData} 
           roles={[UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE, UserRole.CLIENT_ADMIN]}
+        />
+      </Route>
+      
+      <Route path="/shiprocket-api">
+        <ProtectedRoute 
+          component={ShiprocketApiData} 
+          roles={[UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE]}
         />
       </Route>
 

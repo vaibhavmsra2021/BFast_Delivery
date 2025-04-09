@@ -655,6 +655,68 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   );
   
+  // Fetch orders directly from Shiprocket API
+  apiRouter.get(
+    "/shiprocket/api/orders",
+    authService.authenticate,
+    authService.authorize([UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE]),
+    async (req: Request, res: Response) => {
+      try {
+        const shiprocketData = await shiprocketService.fetchAllOrders();
+        res.json(shiprocketData);
+      } catch (error) {
+        console.error("Error fetching Shiprocket orders:", error);
+        res.status(500).json({ 
+          message: "An error occurred while fetching Shiprocket orders",
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  );
+  
+  // Fetch shipments directly from Shiprocket API
+  apiRouter.get(
+    "/shiprocket/api/shipments",
+    authService.authenticate,
+    authService.authorize([UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE]),
+    async (req: Request, res: Response) => {
+      try {
+        const shiprocketData = await shiprocketService.fetchAllShipments();
+        res.json(shiprocketData);
+      } catch (error) {
+        console.error("Error fetching Shiprocket shipments:", error);
+        res.status(500).json({ 
+          message: "An error occurred while fetching Shiprocket shipments",
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  );
+  
+  // Test Shiprocket authentication
+  apiRouter.get(
+    "/shiprocket/api/test-auth",
+    authService.authenticate,
+    authService.authorize([UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE]),
+    async (req: Request, res: Response) => {
+      try {
+        const token = await shiprocketService.authenticate();
+        res.json({ 
+          success: true, 
+          message: "Successfully authenticated with Shiprocket",
+          token_preview: token.substring(0, 10) + "..." // Only show part of the token for security
+        });
+      } catch (error) {
+        console.error("Error testing Shiprocket authentication:", error);
+        res.status(500).json({ 
+          success: false,
+          message: "Failed to authenticate with Shiprocket",
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  );
+  
   // Use API router
   app.use("/api", apiRouter);
   

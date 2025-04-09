@@ -3,22 +3,59 @@ import { IStorage } from "../storage";
 import { Client, Order, OrderStatus } from "@shared/schema";
 
 export class ShiprocketService {
+  private token: string | null = null;
+  private tokenExpiry: Date | null = null;
+  
   constructor(private storage: IStorage) {}
+
+  // Authenticate with Shiprocket API
+  async authenticate(): Promise<string> {
+    try {
+      // Check if we have a valid token
+      if (this.token && this.tokenExpiry && this.tokenExpiry > new Date()) {
+        return this.token;
+      }
+      
+      const url = "https://apiv2.shiprocket.in/v1/external/auth/login";
+      const response = await axios.post(url, {
+        email: "bfast.technology@gmail.com",
+        password: "FuTe@e4HIDrub"
+      });
+      
+      if (response.data && response.data.token) {
+        this.token = response.data.token;
+        
+        // Set token expiry (usually 24 hours for Shiprocket)
+        this.tokenExpiry = new Date();
+        this.tokenExpiry.setHours(this.tokenExpiry.getHours() + 23); // Set expiry to 23 hours to be safe
+        
+        return this.token;
+      } else {
+        throw new Error("Authentication failed: No token received");
+      }
+    } catch (error) {
+      console.error("Error authenticating with Shiprocket:", error);
+      throw error;
+    }
+  }
 
   // Get tracking information from Shiprocket
   async getTrackingInfo(awb: string, clientId: string): Promise<any> {
     try {
+      // Get client for context/logging
       const client = await this.storage.getClientByClientId(clientId);
       
       if (!client) {
         throw new Error(`Client not found: ${clientId}`);
       }
 
-      // In a real implementation, this would use the Shiprocket API
+      // Get authentication token
+      const token = await this.authenticate();
+      
       const url = `https://apiv2.shiprocket.in/v1/external/courier/track/awb/${awb}`;
       
       const headers = {
-        'Authorization': `Bearer ${client.shiprocket_api_key}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
 
@@ -29,10 +66,50 @@ export class ShiprocketService {
       throw error;
     }
   }
+  
+  // Fetch all orders from Shiprocket
+  async fetchAllOrders(): Promise<any> {
+    try {
+      const token = await this.authenticate();
+      
+      const url = "https://apiv2.shiprocket.in/v1/external/orders";
+      
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await axios.get(url, { headers });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching orders from Shiprocket:", error);
+      throw error;
+    }
+  }
+  
+  // Fetch all shipments from Shiprocket
+  async fetchAllShipments(): Promise<any> {
+    try {
+      const token = await this.authenticate();
+      
+      const url = "https://apiv2.shiprocket.in/v1/external/shipments";
+      
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await axios.get(url, { headers });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching shipments from Shiprocket:", error);
+      throw error;
+    }
+  }
 
   // Map Shiprocket status to our status
-  private mapStatusToOrderStatus(shiprocketStatus: string): OrderStatus {
-    const statusMap: Record<string, OrderStatus> = {
+  private mapStatusToOrderStatus(shiprocketStatus: string): typeof OrderStatus[keyof typeof OrderStatus] {
+    const statusMap: Record<string, typeof OrderStatus[keyof typeof OrderStatus]> = {
       'Delivered': OrderStatus.DELIVERED,
       'RTO Delivered': OrderStatus.RTO,
       'Return Initiated': OrderStatus.RTO,

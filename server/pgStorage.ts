@@ -46,6 +46,10 @@ export class PgStorage implements IStorage {
   async getUsersByClientId(clientId: string): Promise<User[]> {
     return await db.select().from(users).where(eq(users.client_id, clientId));
   }
+  
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
 
   // Client operations
   async getClient(id: number): Promise<Client | undefined> {

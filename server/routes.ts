@@ -124,45 +124,13 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         const user = (req as any).user;
         let users;
         
-        // Get BFAST users helper function
-        const getAllBfastUsers = async () => {
-          try {
-            // This is a temporary solution - in a real app we would add
-            // a proper method to the storage interface
-            const pool = (storage as any).implementation.pool;
-            if (!pool) return [];
-            
-            const result = await pool.query('SELECT * FROM users WHERE client_id IS NULL');
-            return result.rows || [];
-          } catch (error) {
-            console.error("Error fetching BFAST users:", error);
-            return [];
-          }
-        };
-        
         if (user.role === UserRole.CLIENT_ADMIN) {
           // Client admin can only see users for their client
           const clientId = user.clientId;
           users = await storage.getUsersByClientId(clientId);
         } else {
           // Bfast admin can see all users
-          // We need a method to get all users from the database
-          // For now, let's get all users from all clients
-          const clients = await storage.getAllClients();
-          const allUsers = [];
-          
-          // Add all users for each client
-          for (const client of clients) {
-            const clientUsers = await storage.getUsersByClientId(client.client_id);
-            allUsers.push(...clientUsers);
-          }
-          
-          // Also add BFAST users (those without client_id)
-          // We need to implement this method in our storage
-          const bfastUsers = await getAllBfastUsers();
-          allUsers.push(...bfastUsers);
-          
-          users = allUsers;
+          users = await storage.getAllUsers();
         }
         
         // Remove passwords

@@ -14,6 +14,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getUsersByClientId(clientId: string): Promise<User[]>;
+  getAllUsers(): Promise<User[]>;
   
   // Client operations
   getClient(id: number): Promise<Client | undefined>;
@@ -146,6 +147,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).filter(
       (user) => user.client_id === clientId,
     );
+  }
+  
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
   }
   
   // Client operations
@@ -338,6 +343,10 @@ export class StorageManager implements IStorage {
 
   async getUsersByClientId(clientId: string): Promise<User[]> {
     return this.implementation.getUsersByClientId(clientId);
+  }
+  
+  async getAllUsers(): Promise<User[]> {
+    return this.implementation.getAllUsers();
   }
 
   // Client operations

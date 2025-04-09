@@ -7,301 +7,437 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Package, CheckCircle, AlertTriangle, TruckIcon, RefreshCw } from "lucide-react";
+import { Package, CheckCircle, AlertTriangle, TruckIcon, RefreshCw, Database, Radio } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Common interface for tracking steps
 interface TrackingStep {
   date: string;
   location: string;
-  status_detail: string;
+  status: string;
+  activity: string;
 }
 
+// Combined tracking info type to handle both API and DB responses
 interface TrackingInfo {
-  order: {
-    order_id: string;
-    awb: string;
-    customer_name: string;
-    delivery_address: string;
-    city: string;
-    state: string;
-    pincode: string;
-    amount: number;
-    payment_mode: string;
-    product_name: string;
-    quantity: number;
-  };
-  tracking: {
-    status: string;
-    last_update: string;
-    last_location: string;
-    last_remark: string;
-    tracking_history: TrackingStep[];
-  };
-  client: {
-    name: string;
-    logo: string;
-  };
+  source?: 'api' | 'database';
+  
+  // Order info
+  order_id?: string;
+  awb?: string;
+  customer_name?: string;
+  courier_name?: string;
+  etd?: string;
+  delivery_address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  amount?: number;
+  payment_mode?: string;
+  product_name?: string;
+  quantity?: number;
+  
+  // Tracking info
+  status?: string;
+  current_status?: string;
+  last_update?: string;
+  current_timestamp?: string;
+  last_location?: string;
+  last_remark?: string;
+  shipment_track_activities?: TrackingStep[];
+  track_url?: string;
+  
+  // Client info
+  client_name?: string;
+  client_logo?: string;
 }
 
 interface TrackingPageProps {
-  trackingInfo: TrackingInfo | null;
+  trackingInfo: any;
   isLoading: boolean;
   error: string | null;
   dataSource?: 'api' | 'database';
 }
 
 export function TrackingPage({ trackingInfo, isLoading, error, dataSource = 'api' }: TrackingPageProps) {
-  const [statusPercentage, setStatusPercentage] = useState(0);
+  const [showAllSteps, setShowAllSteps] = useState(false);
 
-  useEffect(() => {
-    if (trackingInfo?.tracking?.status) {
-      const statusMap: Record<string, number> = {
-        "Pending": 10,
-        "In-Process": 40,
-        "Delivered": 100,
-        "RTO": 100,
-        "NDR": 80,
-        "Lost": 100
-      };
-      
-      setStatusPercentage(statusMap[trackingInfo.tracking.status] || 0);
-    }
-  }, [trackingInfo]);
+  if (isLoading) {
+    return <TrackingPageSkeleton />;
+  }
 
-  const getStatusIcon = (status: string | undefined) => {
-    switch(status) {
-      case "Delivered":
-        return <CheckCircle className="h-8 w-8 text-status-delivered" />;
-      case "RTO":
-        return <RefreshCw className="h-8 w-8 text-status-rto" />;
-      case "NDR":
-        return <AlertTriangle className="h-8 w-8 text-status-ndr" />;
-      case "Lost":
-        return <AlertTriangle className="h-8 w-8 text-status-lost" />;
-      default:
-        return <TruckIcon className="h-8 w-8 text-status-inprocess" />;
-    }
-  };
-
-  const getStatusColor = (status: string | undefined) => {
-    switch(status) {
-      case "Delivered":
-        return "text-status-delivered";
-      case "RTO":
-        return "text-status-rto";
-      case "NDR":
-        return "text-status-ndr";
-      case "Lost":
-        return "text-status-lost";
-      default:
-        return "text-status-inprocess";
-    }
-  };
-
-  const getStatusBadgeColor = (status: string | undefined) => {
-    switch(status) {
-      case "Delivered":
-        return "bg-status-delivered bg-opacity-10 text-status-delivered";
-      case "RTO":
-        return "bg-status-rto bg-opacity-10 text-status-rto";
-      case "NDR":
-        return "bg-status-ndr bg-opacity-10 text-status-ndr";
-      case "Lost":
-        return "bg-status-lost bg-opacity-10 text-status-lost";
-      default:
-        return "bg-status-inprocess bg-opacity-10 text-status-inprocess";
-    }
-  };
-
-  if (error) {
+  if (error || !trackingInfo) {
     return (
       <Card>
-        <CardContent className="pt-6 flex flex-col items-center justify-center min-h-[300px]">
-          <AlertTriangle className="h-12 w-12 text-status-rto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Tracking Information Not Found</h2>
-          <p className="text-neutral-600">{error}</p>
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center justify-center py-12">
+            <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
+            <h3 className="text-xl font-medium mb-2">Tracking Information Not Found</h3>
+            <p className="text-neutral-600 text-center max-w-md">
+              {error || "We couldn't find tracking information for this AWB number. Please check the number and try again."}
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
+  // Determine data source
+  const actualSource = trackingInfo.source || dataSource;
+  
+  // Extract tracking info based on response structure
+  let parsedInfo: TrackingInfo = {};
+  let trackingHistory: TrackingStep[] = [];
+  
+  // API response format
+  if (trackingInfo.tracking_data) {
+    parsedInfo = {
+      source: 'api',
+      order_id: trackingInfo.order?.order_id,
+      awb: trackingInfo.order?.awb,
+      courier_name: trackingInfo.order?.courier_name,
+      status: trackingInfo.order?.current_status || trackingInfo.order?.shipment_status,
+      current_status: trackingInfo.order?.current_status,
+      etd: trackingInfo.order?.etd,
+      current_timestamp: trackingInfo.order?.current_timestamp,
+      track_url: trackingInfo.tracking_data?.track_url
+    };
+    
+    // Extract tracking history from API response
+    trackingHistory = (trackingInfo.tracking_data.shipment_track_activities || []).map((activity: any) => ({
+      date: activity.date,
+      location: activity.location || 'Unknown',
+      status: activity.status,
+      activity: activity.activity
+    }));
+  } 
+  // Database response format
+  else if (trackingInfo.order && trackingInfo.tracking) {
+    parsedInfo = {
+      source: 'database',
+      order_id: trackingInfo.order.order_id,
+      awb: trackingInfo.order.awb,
+      customer_name: trackingInfo.order.customer_name,
+      delivery_address: trackingInfo.order.delivery_address,
+      city: trackingInfo.order.city,
+      state: trackingInfo.order.state,
+      pincode: trackingInfo.order.pincode,
+      amount: trackingInfo.order.amount,
+      payment_mode: trackingInfo.order.payment_mode,
+      product_name: trackingInfo.order.product_name,
+      quantity: trackingInfo.order.quantity,
+      status: trackingInfo.tracking.status,
+      last_update: trackingInfo.tracking.last_update,
+      last_location: trackingInfo.tracking.last_location,
+      last_remark: trackingInfo.tracking.last_remark,
+      client_name: trackingInfo.client?.name,
+      client_logo: trackingInfo.client?.logo
+    };
+    
+    // Extract tracking history from database response
+    trackingHistory = trackingInfo.tracking?.tracking_history || [];
+  }
+  
+  // Display limited history initially
+  const displayHistory = showAllSteps ? trackingHistory : trackingHistory.slice(0, 5);
+  const hasMoreSteps = trackingHistory.length > 5;
+
+  // Format status for display
+  const getStatusBadge = (status: string = '') => {
+    const statusLower = status.toLowerCase();
+    
+    if (statusLower.includes('delivered')) {
+      return <Badge className="bg-green-100 text-green-800">Delivered</Badge>;
+    } else if (statusLower.includes('transit') || statusLower.includes('pickup') || statusLower.includes('shipped')) {
+      return <Badge className="bg-blue-100 text-blue-800">In Transit</Badge>;
+    } else if (statusLower.includes('return') || statusLower.includes('rto')) {
+      return <Badge className="bg-red-100 text-red-800">Returned</Badge>;
+    } else if (statusLower.includes('pending') || statusLower.includes('created')) {
+      return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+    } else {
+      return <Badge>{status}</Badge>;
+    }
+  };
+
   return (
-    <Card className="max-w-4xl mx-auto">
-      {isLoading ? (
-        <CardContent className="pt-6">
-          <div className="flex justify-between items-start mb-8">
+    <>
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Shipment Details {parsedInfo.awb && `(AWB: ${parsedInfo.awb})`}</CardTitle>
+            <Badge 
+              variant="outline"
+              className={actualSource === 'database' ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}
+            >
+              <div className="flex items-center gap-1">
+                {actualSource === 'database' ? <Database className="h-3 w-3" /> : <Radio className="h-3 w-3" />}
+                <span>Source: {actualSource === 'database' ? 'Database' : 'API'}</span>
+              </div>
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Order Information */}
             <div>
-              <Skeleton className="h-8 w-40 mb-2" />
-              <Skeleton className="h-4 w-24" />
+              <h3 className="font-medium mb-3">Order Information</h3>
+              <div className="space-y-2">
+                {parsedInfo.order_id && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Order ID:</span>
+                    <span className="font-medium">{parsedInfo.order_id}</span>
+                  </div>
+                )}
+                {parsedInfo.awb && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">AWB Number:</span>
+                    <span className="font-medium">{parsedInfo.awb}</span>
+                  </div>
+                )}
+                {parsedInfo.courier_name && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Courier:</span>
+                    <span>{parsedInfo.courier_name}</span>
+                  </div>
+                )}
+                {parsedInfo.status && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Status:</span>
+                    <span>{getStatusBadge(parsedInfo.status)}</span>
+                  </div>
+                )}
+                {parsedInfo.etd && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Expected Delivery:</span>
+                    <span>{new Date(parsedInfo.etd).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {parsedInfo.payment_mode && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Payment Mode:</span>
+                    <span>{parsedInfo.payment_mode}</span>
+                  </div>
+                )}
+                {typeof parsedInfo.amount === 'number' && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Amount:</span>
+                    <span className="font-medium">₹{parsedInfo.amount.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <Skeleton className="h-12 w-12 rounded-full" />
+            
+            {/* Shipping Information */}
+            <div>
+              <h3 className="font-medium mb-3">Shipping Information</h3>
+              <div className="space-y-2">
+                {parsedInfo.customer_name && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Customer:</span>
+                    <span className="font-medium">{parsedInfo.customer_name}</span>
+                  </div>
+                )}
+                {parsedInfo.delivery_address && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Address:</span>
+                    <span className="text-right">{parsedInfo.delivery_address}</span>
+                  </div>
+                )}
+                {(parsedInfo.city || parsedInfo.state || parsedInfo.pincode) && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Location:</span>
+                    <span>
+                      {parsedInfo.city ? `${parsedInfo.city}, ` : ''}
+                      {parsedInfo.state ? `${parsedInfo.state} ` : ''}
+                      {parsedInfo.pincode ? `- ${parsedInfo.pincode}` : ''}
+                    </span>
+                  </div>
+                )}
+                {parsedInfo.product_name && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Product:</span>
+                    <span>{parsedInfo.product_name}</span>
+                  </div>
+                )}
+                {parsedInfo.quantity && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Quantity:</span>
+                    <span>{parsedInfo.quantity}</span>
+                  </div>
+                )}
+                {parsedInfo.last_update && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Last Update:</span>
+                    <span>{new Date(parsedInfo.last_update).toLocaleString()}</span>
+                  </div>
+                )}
+                {parsedInfo.current_timestamp && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Last Update:</span>
+                    <span>{new Date(parsedInfo.current_timestamp).toLocaleString()}</span>
+                  </div>
+                )}
+                {parsedInfo.track_url && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Track On:</span>
+                    <a 
+                      href={parsedInfo.track_url} 
+                      target="_blank"
+                      rel="noopener noreferrer" 
+                      className="text-primary hover:underline"
+                    >
+                      Courier Website
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           
-          <div className="mb-8">
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-3/4" />
+          {/* Client details if available */}
+          {parsedInfo.client_name && (
+            <div className="mt-4 pt-4 border-t border-neutral-200">
+              <div className="flex justify-between items-center">
+                <span className="text-neutral-600">Shipped By:</span>
+                <div className="flex items-center">
+                  {parsedInfo.client_logo && (
+                    <img 
+                      src={parsedInfo.client_logo} 
+                      alt={parsedInfo.client_name} 
+                      className="h-6 mr-2" 
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  )}
+                  <span className="font-medium">{parsedInfo.client_name}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tracking History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {displayHistory.length > 0 ? (
+            <div className="relative">
+              <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-neutral-200" />
+              
+              <div className="space-y-6">
+                {displayHistory.map((step, index) => (
+                  <div key={index} className="relative pl-8">
+                    <div className="absolute left-0 top-1.5 rounded-full bg-primary p-1">
+                      {index === 0 ? (
+                        <Package className="h-3 w-3 text-primary-foreground" />
+                      ) : index === displayHistory.length - 1 && step.status.toLowerCase().includes('delivered') ? (
+                        <CheckCircle className="h-3 w-3 text-primary-foreground" />
+                      ) : (
+                        <TruckIcon className="h-3 w-3 text-primary-foreground" />
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row sm:justify-between">
+                      <div className="mb-1 sm:mb-0">
+                        <h4 className="font-medium">{step.status}</h4>
+                        <p className="text-sm text-neutral-600">{step.activity}</p>
+                      </div>
+                      <div className="text-sm text-neutral-500 sm:text-right">
+                        <div>{new Date(step.date).toLocaleDateString()}</div>
+                        <div>{new Date(step.date).toLocaleTimeString()}</div>
+                        <div>{step.location}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {hasMoreSteps && (
+                <div className="mt-4 text-center">
+                  <button
+                    className="inline-flex items-center text-sm text-primary hover:underline"
+                    onClick={() => setShowAllSteps(!showAllSteps)}
+                  >
+                    {showAllSteps ? "Show Less" : `Show All (${trackingHistory.length})`}
+                    <RefreshCw className="ml-1 h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-4 text-center text-neutral-500">
+              No tracking history available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
+function TrackingPageSkeleton() {
+  return (
+    <>
+      <Card className="mb-6">
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Skeleton className="h-5 w-40 mb-4" />
+              <div className="space-y-3">
+                {Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex justify-between">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Skeleton className="h-5 w-40 mb-4" />
+              <div className="space-y-3">
+                {Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex justify-between">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          
-          <div className="flex mb-8">
-            <Skeleton className="h-24 w-full rounded-lg" />
-          </div>
-          
-          <div className="space-y-8">
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-40" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
             {Array(3).fill(0).map((_, i) => (
-              <div key={i} className="flex">
-                <Skeleton className="h-10 w-10 rounded-full mr-4" />
-                <div className="flex-1">
-                  <Skeleton className="h-4 w-40 mb-2" />
-                  <Skeleton className="h-4 w-full mb-1" />
-                  <Skeleton className="h-4 w-3/4" />
+              <div key={i} className="relative pl-8">
+                <Skeleton className="absolute left-0 top-1.5 h-5 w-5 rounded-full" />
+                <div className="flex flex-col sm:flex-row sm:justify-between">
+                  <div className="mb-1 sm:mb-0">
+                    <Skeleton className="h-5 w-32 mb-1" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                  <div>
+                    <Skeleton className="h-4 w-24 mb-1" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </CardContent>
-      ) : trackingInfo ? (
-        <>
-          <CardHeader className="pb-0">
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="flex items-center mb-1">
-                  <CardTitle className="text-xl">
-                    Tracking #{trackingInfo.order.awb}
-                  </CardTitle>
-                  {dataSource && (
-                    <Badge 
-                      variant={dataSource === 'api' ? "default" : "outline"}
-                      className={`ml-2 ${dataSource === 'api' ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}
-                    >
-                      {dataSource === 'api' ? 'API' : 'Database'}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-neutral-500">
-                  Order #{trackingInfo.order.order_id}
-                </p>
-              </div>
-              {trackingInfo.client.logo ? (
-                <img 
-                  src={trackingInfo.client.logo} 
-                  alt={`${trackingInfo.client.name} logo`} 
-                  className="h-12 w-auto"
-                />
-              ) : (
-                <div className="h-12 w-12 bg-primary text-white rounded-full flex items-center justify-center text-lg font-bold">
-                  {trackingInfo.client.name.charAt(0)}
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          
-          <CardContent className="pt-6">
-            {/* Status */}
-            <div className="mb-8">
-              <div className="flex items-center mb-2">
-                {getStatusIcon(trackingInfo.tracking.status)}
-                <h2 className={`text-xl font-bold ml-2 ${getStatusColor(trackingInfo.tracking.status)}`}>
-                  {trackingInfo.tracking.status}
-                </h2>
-                <Badge className={`ml-3 ${getStatusBadgeColor(trackingInfo.tracking.status)}`}>
-                  {trackingInfo.order.payment_mode}
-                </Badge>
-              </div>
-              
-              <p className="text-neutral-600">
-                {trackingInfo.tracking.last_remark || "Your package is on the way."}
-              </p>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="mb-8">
-              <div className="w-full bg-neutral-100 rounded-full h-2.5">
-                <div 
-                  className={`h-2.5 rounded-full ${
-                    trackingInfo.tracking.status === "RTO" 
-                      ? "bg-status-rto" 
-                      : trackingInfo.tracking.status === "NDR"
-                      ? "bg-status-ndr"
-                      : trackingInfo.tracking.status === "Lost"
-                      ? "bg-status-lost"
-                      : "bg-primary"
-                  }`}
-                  style={{ width: `${statusPercentage}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Shipment Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div>
-                <h3 className="text-sm font-medium text-neutral-500 mb-1">
-                  Delivery Address
-                </h3>
-                <p className="font-medium">{trackingInfo.order.customer_name}</p>
-                <p className="text-neutral-700">{trackingInfo.order.delivery_address}</p>
-                <p className="text-neutral-700">
-                  {trackingInfo.order.city}, {trackingInfo.order.state} {trackingInfo.order.pincode}
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-neutral-500 mb-1">
-                  Shipment Details
-                </h3>
-                <p className="font-medium">{trackingInfo.order.product_name}</p>
-                <p className="text-neutral-700">Quantity: {trackingInfo.order.quantity}</p>
-                <p className="text-neutral-700">Amount: ₹{(trackingInfo.order.amount || 0).toFixed(2)}</p>
-              </div>
-            </div>
-
-            <Separator className="my-6" />
-
-            {/* Tracking History */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">Tracking History</h3>
-              
-              {trackingInfo.tracking.tracking_history && trackingInfo.tracking.tracking_history.length > 0 ? (
-                <div className="space-y-6 relative">
-                  {trackingInfo.tracking.tracking_history.map((step, index) => (
-                    <div 
-                      key={index} 
-                      className={`relative pl-8 ${
-                        index !== trackingInfo.tracking.tracking_history.length - 1 
-                          ? "pb-8 border-l-2 border-primary" 
-                          : ""
-                      }`}
-                    >
-                      <div className="absolute w-4 h-4 bg-primary rounded-full -left-[9px] top-0"></div>
-                      <div>
-                        <div className="font-medium">
-                          {step.location}
-                        </div>
-                        <div className="text-sm mt-1">
-                          {step.status_detail}
-                        </div>
-                        <div className="text-xs text-neutral-500 mt-1">
-                          {step.date}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-neutral-500 flex flex-col items-center">
-                  <Package className="h-12 w-12 text-neutral-300 mb-2" />
-                  <p>No tracking history available yet</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </>
-      ) : (
-        <CardContent className="pt-6 flex flex-col items-center justify-center min-h-[300px]">
-          <Package className="h-12 w-12 text-neutral-300 mb-4" />
-          <h2 className="text-xl font-bold mb-2">No Tracking Information</h2>
-          <p className="text-neutral-600">Enter a valid AWB number to track your shipment</p>
-        </CardContent>
-      )}
-    </Card>
+      </Card>
+    </>
   );
 }

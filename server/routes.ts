@@ -740,6 +740,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     
     // Construct response in our standard format
     return {
+      source: 'api',
       order: {
         order_id: shipmentDetails.order_id || "SHIPROCKET-" + awb,
         awb: awb,
@@ -771,10 +772,9 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     };
   };
   
-  // Track shipment using AWB number via Shiprocket API
+  // Track shipment using AWB number via Shiprocket API - no authentication required
   apiRouter.get(
     "/shiprocket/track/:awb",
-    authService.authenticate,
     async (req: Request, res: Response) => {
       try {
         const { awb } = req.params;
@@ -806,7 +806,19 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     try {
       const { awb } = req.params;
       
-      // Get order by AWB
+      // First try to get from Shiprocket API
+      try {
+        const trackingInfo = await shiprocketApiService.trackShipment(awb);
+        if (trackingInfo && trackingInfo.tracking_data) {
+          // Convert to our standard format and return
+          const formattedData = convertShiprocketTrackingToStandardFormat(awb, trackingInfo);
+          return res.json(formattedData);
+        }
+      } catch (apiError) {
+        console.log(`API tracking failed for ${awb}, falling back to database`);
+      }
+      
+      // Fallback: Get order by AWB from database
       const order = await storage.getOrderByAWB(awb);
       
       if (!order) {
@@ -819,8 +831,9 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       // Get tracking info from Shiprocket
       const trackingInfo = await shiprocketService.getTrackingInfo(awb, order.client_id);
       
-      // Combine order and tracking info
+      // Combine order and tracking info with source indicator
       res.json({
+        source: 'database',
         order: {
           order_id: order.order_id,
           awb: order.awb,

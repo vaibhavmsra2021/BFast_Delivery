@@ -6,7 +6,7 @@ import { TrackingPage } from "@/components/track/TrackingPage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 
 export default function PublicTrack() {
   const [, params] = useRoute<{ awb: string }>("/track/:awb");
@@ -26,12 +26,13 @@ export default function PublicTrack() {
     data: trackingInfo, 
     isLoading, 
     error,
-    isError
+    isError,
+    refetch
   } = useQuery({
     queryKey: ['/api/track', searchedAwb],
     queryFn: () => searchedAwb ? getPublicTrackingInfo(searchedAwb) : null,
     enabled: !!searchedAwb,
-    retry: false
+    retry: 1
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -40,6 +41,12 @@ export default function PublicTrack() {
       setSearchedAwb(awb);
       // Update URL without page reload
       window.history.pushState(null, "", `/track/${awb}`);
+    }
+  };
+  
+  const handleRefresh = () => {
+    if (searchedAwb) {
+      refetch();
     }
   };
 
@@ -72,6 +79,11 @@ export default function PublicTrack() {
                 <Search className="h-4 w-4 mr-2" />
                 Track
               </Button>
+              {searchedAwb && (
+                <Button type="button" variant="outline" onClick={handleRefresh}>
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              )}
             </form>
           </CardContent>
         </Card>
@@ -80,6 +92,7 @@ export default function PublicTrack() {
           trackingInfo={trackingInfo} 
           isLoading={isLoading} 
           error={errorMessage}
+          dataSource={trackingInfo?.source || "api"}
         />
       </div>
     </div>

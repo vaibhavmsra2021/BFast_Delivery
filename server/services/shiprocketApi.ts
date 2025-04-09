@@ -170,8 +170,22 @@ export class ShiprocketApiService {
   /**
    * Track shipment using AWB number
    */
-  async trackShipment(awb: string): Promise<any> {
+  async trackShipment(awb: string, clientId?: string): Promise<any> {
     try {
+      // If clientId is provided, try to use that client's credentials
+      if (clientId) {
+        const client = await storage.getClientByClientId(clientId);
+        if (client && (client.shiprocket_email && client.shiprocket_password)) {
+          // Create a new instance with the client credentials
+          const clientApi = new ShiprocketApiService(
+            client.shiprocket_email, 
+            client.shiprocket_password
+          );
+          return await clientApi.trackShipment(awb);
+        }
+      }
+      
+      // Fall back to default credentials
       const headers = await this.getHeaders();
       const response = await axios.get(
         `${this.baseUrl}/courier/track/awb/${awb}`,

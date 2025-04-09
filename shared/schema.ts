@@ -69,7 +69,9 @@ export const clients = pgTable("clients", {
   shopify_store_id: text("shopify_store_id").notNull(),
   shopify_api_key: text("shopify_api_key").notNull(),
   shopify_api_secret: text("shopify_api_secret").notNull(),
-  shiprocket_api_key: text("shiprocket_api_key").notNull(),
+  shiprocket_api_key: text("shiprocket_api_key"),
+  shiprocket_email: text("shiprocket_email"),
+  shiprocket_password: text("shiprocket_password"),
   logo_url: text("logo_url"),
   created_at: timestamp("created_at").defaultNow(),
 });
@@ -81,6 +83,8 @@ export const insertClientSchema = createInsertSchema(clients).pick({
   shopify_api_key: true,
   shopify_api_secret: true,
   shiprocket_api_key: true,
+  shiprocket_email: true,
+  shiprocket_password: true,
   logo_url: true,
 });
 

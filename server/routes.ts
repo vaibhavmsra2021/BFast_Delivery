@@ -282,7 +282,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         // Use the shiprocket API service to test the connection
         try {
           // Create a temporary instance of the ShiprocketApiService with the provided credentials
-          const tempShiprocketApi = new ShiprocketApiService();
+          const tempShiprocketApi = new ShiprocketApiService(shiprocket_email, shiprocket_password);
           
           // Test authentication with the provided credentials
           await tempShiprocketApi.testAuthentication(shiprocket_email, shiprocket_password);

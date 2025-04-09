@@ -141,24 +141,7 @@ function Router() {
   );
 }
 
-// Helper function to clear authentication storage when needed
-export function clearAuthStorage() {
-  localStorage.removeItem('auth-storage');
-  window.location.href = '/login';
-}
-
 function App() {
-  // Check if there's a URL parameter to clear auth storage
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('clearAuth') === 'true') {
-    clearAuthStorage();
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="p-4 text-center">
-        <h1 className="text-xl font-bold mb-2">Clearing Authentication Data</h1>
-        <p>Redirecting to login page...</p>
-      </div>
-    </div>;
-  }
 
   return (
     <QueryClientProvider client={queryClient}>

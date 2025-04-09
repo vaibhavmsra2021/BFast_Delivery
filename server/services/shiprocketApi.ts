@@ -98,26 +98,46 @@ export class ShiprocketApiService {
   private async authenticate(): Promise<string> {
     // If token exists and is not expired, return it
     if (this.token && this.tokenExpiry && this.tokenExpiry > new Date()) {
+      console.log('Using cached token, expiry:', this.tokenExpiry);
       return this.token;
     }
 
     try {
+      console.log('Authenticating with Shiprocket API using credentials:', 
+        this.email ? 'Custom email' : 'Default email',
+        this.password ? 'Custom password' : 'Default password');
+      
+      const credentials = {
+        email: this.email || 'bfast.technology@gmail.com',
+        password: this.password || 'FuTe@e4HIDrub',
+      };
+      
       const response = await axios.post<ShiprocketAuthResponse>(
         `${this.baseUrl}/auth/login`,
-        {
-          email: this.email || 'bfast.technology@gmail.com',
-          password: this.password || 'FuTe@e4HIDrub',
-        }
+        credentials
       );
 
-      this.token = response.data.token;
-      // Token is valid for 10 days according to the documentation
-      this.tokenExpiry = new Date();
-      this.tokenExpiry.setDate(this.tokenExpiry.getDate() + 10);
-
-      return this.token;
+      if (response.data && response.data.token) {
+        console.log('Successfully authenticated with Shiprocket API');
+        this.token = response.data.token;
+        // Token is valid for 10 days according to the documentation
+        this.tokenExpiry = new Date();
+        this.tokenExpiry.setDate(this.tokenExpiry.getDate() + 10);
+        return this.token;
+      } else {
+        console.error('Shiprocket API returned no token in the response:', response.data);
+        throw new Error('Failed to obtain token from Shiprocket');
+      }
     } catch (error) {
-      console.error('Error authenticating with Shiprocket:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('Error authenticating with Shiprocket:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        });
+      } else {
+        console.error('Error authenticating with Shiprocket:', error);
+      }
       throw new Error('Failed to authenticate with Shiprocket');
     }
   }
@@ -147,6 +167,142 @@ export class ShiprocketApiService {
     } catch (error) {
       console.error('Error fetching orders from Shiprocket:', error);
       throw new Error('Failed to fetch orders from Shiprocket');
+    }
+  }
+  
+  /**
+   * Get all orders from the external Shiprocket API endpoint (v1/external/orders)
+   * Note: Shiprocket API seems to have issues with the 'orders' endpoint,
+   * so we're trying multiple approaches to get the data.
+   */
+  async getAllOrders(page = 1, pageSize = 20): Promise<ShiprocketOrdersResponse> {
+    try {
+      // Let's try with the regular 'orders' endpoint first
+      try {
+        const headers = await this.getHeaders();
+        console.log('Attempting to fetch orders using standard endpoint with parameters:',
+          { page, pageSize, headers: { 'Authorization': 'Bearer [REDACTED]' } });
+        
+        const response = await axios.get<ShiprocketOrdersResponse>(
+          `${this.baseUrl}/orders`,
+          { 
+            headers,
+            params: {
+              page,
+              per_page: pageSize,
+              sort: 'created_at',
+              direction: 'desc' // Use direction parameter for order direction
+            }
+          }
+        );
+        
+        console.log('Successfully fetched orders from Shiprocket API with status:', response.status);
+        
+        if (response.data && response.data.data && response.data.data.orders) {
+          console.log(`Found ${response.data.data.orders.length} orders`);
+          return response.data;
+        } else {
+          console.log('No orders found in standard response or unexpected structure');
+        }
+      } catch (standardEndpointError) {
+        console.error('Error with standard endpoint, trying alternative approach');
+      }
+      
+      // If the above fails, let's try the "shipments" endpoint instead, which might be more reliable
+      try {
+        const headers = await this.getHeaders();
+        console.log('Attempting to fetch orders using shipments endpoint');
+        
+        const response = await axios.get(
+          `${this.baseUrl}/shipments`,
+          { 
+            headers,
+            params: {
+              page,
+              per_page: pageSize,
+              // The Shiprocket API expects direction to be "asc" or "desc", not sort_by
+              sort: 'created_at',
+              direction: 'desc'
+            }
+          }
+        );
+        
+        console.log('Successfully fetched shipments data:', 
+          response.status, 
+          JSON.stringify(Object.keys(response.data || {})));
+        
+        // Convert shipments format to match orders format
+        if (response.data && response.data.data && Array.isArray(response.data.data.shipments)) {
+          console.log(`Found ${response.data.data.shipments.length} shipments`);
+          
+          // Transform the shipments to match the orders format
+          const transformedData = {
+            data: {
+              orders: response.data.data.shipments.map((shipment: any) => ({
+                id: shipment.id,
+                order_id: shipment.order_id,
+                order_number: shipment.order_id,
+                channel_order_id: shipment.channel_order_id,
+                channel: shipment.channel || 'shiprocket',
+                order_date: shipment.created_at,
+                pickup_date: shipment.pickup_scheduled_date,
+                status: shipment.status,
+                status_code: 1,
+                awb_code: shipment.awb,
+                courier_name: shipment.courier_name,
+                payment_method: shipment.payment_method,
+                total: shipment.total,
+                shipping_customer_name: shipment.customer_name,
+                shipping_address: shipment.customer_address,
+                shipping_city: shipment.customer_city,
+                shipping_state: shipment.customer_state,
+                shipping_country: shipment.customer_country || 'India',
+                shipping_pincode: shipment.customer_pincode
+              })),
+              total_pages: response.data.meta?.pagination?.total_pages || 1,
+              current_page: response.data.meta?.pagination?.current_page || 1,
+              from: response.data.meta?.pagination?.from || 1,
+              to: response.data.meta?.pagination?.to || response.data.data.shipments.length,
+              total: response.data.meta?.pagination?.total || response.data.data.shipments.length
+            }
+          };
+          
+          return transformedData as ShiprocketOrdersResponse;
+        } else {
+          console.log('No shipments found in response or unexpected structure');
+        }
+      } catch (shipmentEndpointError) {
+        console.error('Error with shipments endpoint:', shipmentEndpointError);
+      }
+      
+      // If all fails, throw an error that will be caught by the outer catch block
+      throw new Error('All attempts to fetch Shiprocket data failed');
+      
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          console.error('Error fetching all orders from Shiprocket API:', {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data,
+            headers: error.response.headers,
+            config: {
+              url: error.config?.url,
+              method: error.config?.method,
+              params: error.config?.params
+            }
+          });
+        } else if (error.request) {
+          console.error('Error fetching all orders from Shiprocket API: No response received', {
+            request: error.request
+          });
+        } else {
+          console.error('Error fetching all orders from Shiprocket API:', error.message);
+        }
+      } else {
+        console.error('Error fetching all orders from Shiprocket API:', error);
+      }
+      throw new Error('Failed to fetch all orders from Shiprocket');
     }
   }
 

@@ -56,7 +56,8 @@ export function ShiprocketOrdersList({ maxItems = 5 }: ShiprocketOrdersListProps
       orders: ShiprocketOrder[];
       total_pages: number;
       current_page: number;
-    }
+    },
+    source?: 'api' | 'database'
   }>({
     queryKey: ['/api/shiprocket/all-orders', page, pageSize],
     queryFn: () => 
@@ -137,6 +138,16 @@ export function ShiprocketOrdersList({ maxItems = 5 }: ShiprocketOrdersListProps
           <CardTitle>Shiprocket Orders</CardTitle>
           <CardDescription>
             Latest orders from Shiprocket
+            {data?.source && (
+              <span className="ml-2 text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1" 
+                style={{ 
+                  backgroundColor: data.source === 'api' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(249, 115, 22, 0.1)',
+                  color: data.source === 'api' ? 'rgb(22, 163, 74)' : 'rgb(234, 88, 12)'
+                }}
+              >
+                {data.source === 'api' ? 'Live API' : 'Local Database'}
+              </span>
+            )}
           </CardDescription>
         </div>
         <div className="flex items-center gap-4">

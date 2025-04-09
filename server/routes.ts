@@ -645,16 +645,16 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
           }
         }
         
-        // Get authentication headers
-        const headers = await (shiprocketApi as any).getHeaders();
-        
-        // Make direct API call to fetch all orders
+        // Use the new getAllOrders method to fetch all orders directly
         try {
-          const response = await axios.get(
-            `https://apiv2.shiprocket.in/v1/external/orders?page=${page}&per_page=${pageSize}`,
-            { headers }
-          );
-          res.json(response.data);
+          console.log('Attempting to fetch all orders from Shiprocket API');
+          const response = await shiprocketApi.getAllOrders(page, pageSize);
+          console.log('Orders fetched successfully from Shiprocket API:', 
+            response.data.orders ? `${response.data.orders.length} orders found` : 'No orders found');
+          res.json({
+            ...response,
+            source: 'api' // Indicate data is coming from the API
+          });
         } catch (apiError) {
           console.error('Error fetching orders from Shiprocket API:', apiError);
           
@@ -699,7 +699,8 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
               from: startIndex + 1,
               to: endIndex,
               total: formattedOrders.length
-            }
+            },
+            source: 'database' // Indicate data is coming from the database
           });
         }
       } catch (error) {

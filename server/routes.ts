@@ -723,6 +723,54 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   );
   
+  // Helper function to convert Shiprocket API tracking data to our format
+  const convertShiprocketTrackingToStandardFormat = (awb: string, trackingData: any) => {
+    // Extract the shipment details
+    const shipmentDetails = trackingData.tracking_data?.shipment_track || {};
+    const trackHistory = trackingData.tracking_data?.shipment_track_activities || [];
+    
+    // Map the status
+    let mappedStatus = "In-Process";
+    if (shipmentDetails.current_status?.includes("Delivered")) {
+      mappedStatus = "Delivered";
+    } else if (shipmentDetails.current_status?.includes("RTO") || 
+               shipmentDetails.current_status?.includes("Return")) {
+      mappedStatus = "RTO";
+    }
+    
+    // Construct response in our standard format
+    return {
+      order: {
+        order_id: shipmentDetails.order_id || "SHIPROCKET-" + awb,
+        awb: awb,
+        customer_name: shipmentDetails.buyer_name || "Customer",
+        delivery_address: shipmentDetails.delivery_address || "Address not available",
+        city: shipmentDetails.destination || "",
+        state: "",
+        pincode: shipmentDetails.pickup_pincode || "",
+        amount: parseFloat(shipmentDetails.cod_amount || "0"),
+        payment_mode: shipmentDetails.cod_amount > 0 ? "COD" : "Prepaid",
+        product_name: shipmentDetails.product_description || "Package",
+        quantity: 1
+      },
+      tracking: {
+        status: mappedStatus,
+        last_update: trackHistory.length > 0 ? trackHistory[0].date : new Date().toISOString(),
+        last_location: shipmentDetails.destination || "",
+        last_remark: shipmentDetails.current_status || "",
+        tracking_history: trackHistory.map(activity => ({
+          date: activity.date || "",
+          location: activity.location || "",
+          status_detail: activity.activity || ""
+        }))
+      },
+      client: {
+        name: "Shiprocket",
+        logo: ""
+      }
+    };
+  };
+  
   // Track shipment using AWB number via Shiprocket API
   apiRouter.get(
     "/shiprocket/track/:awb",
@@ -731,7 +779,18 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       try {
         const { awb } = req.params;
         const trackingInfo = await shiprocketApiService.trackShipment(awb);
-        res.json(trackingInfo);
+        
+        // Check if API returned valid tracking data
+        if (trackingInfo && trackingInfo.tracking_data) {
+          // Convert to our standard format
+          const formattedData = convertShiprocketTrackingToStandardFormat(awb, trackingInfo);
+          return res.json(formattedData);
+        }
+        
+        // Handle case where tracking data is not available
+        res.status(404).json({ 
+          message: `No tracking information found for AWB ${awb}`
+        });
       } catch (error) {
         console.error(`Error tracking shipment with AWB ${req.params.awb}:`, error);
         res.status(500).json({ 

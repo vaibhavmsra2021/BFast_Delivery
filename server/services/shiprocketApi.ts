@@ -152,6 +152,25 @@ export class ShiprocketApiService {
       'Authorization': `Bearer ${token}`
     };
   }
+  
+  /**
+   * Force refresh the token
+   */
+  public async refreshToken(): Promise<void> {
+    // Clear current token details
+    this.token = undefined;
+    this.tokenExpiry = undefined;
+    
+    // Force a new authentication
+    try {
+      console.log('Forcing Shiprocket API token refresh...');
+      await this.authenticate();
+      console.log('Successfully refreshed Shiprocket API token, new expiry:', this.tokenExpiry);
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      throw new Error('Failed to refresh Shiprocket API token');
+    }
+  }
 
   /**
    * Get all orders from Shiprocket
@@ -367,6 +386,8 @@ export class ShiprocketApiService {
    */
   async trackShipment(awb: string, clientId?: string): Promise<any> {
     try {
+      let headers;
+      
       // If clientId is provided, try to use that client's credentials
       if (clientId) {
         const client = await storage.getClientByClientId(clientId);
@@ -376,20 +397,52 @@ export class ShiprocketApiService {
             client.shiprocket_email, 
             client.shiprocket_password
           );
-          return await clientApi.trackShipment(awb);
+          try {
+            return await clientApi.trackShipment(awb);
+          } catch (clientError) {
+            console.warn(`Client-specific credentials failed for AWB ${awb}, trying default credentials:`, clientError);
+            // If client credentials fail, fall back to default credentials
+          }
         }
       }
       
-      // Fall back to default credentials
-      const headers = await this.getHeaders();
+      // Get headers (this will throw if token refresh fails)
+      headers = await this.getHeaders();
+      
+      // Make the API request with proper error handling
       const response = await axios.get(
         `${this.baseUrl}/courier/track/awb/${awb}`,
         { headers }
       );
-      return response.data;
-    } catch (error) {
-      console.error(`Error tracking shipment with AWB ${awb}:`, error);
-      throw new Error(`Failed to track shipment with AWB ${awb}`);
+      
+      // Check if the response has the expected structure
+      if (response.data && (response.data.tracking_data || response.data.status === 200)) {
+        return response.data;
+      } else if (response.data && response.data.message) {
+        throw new Error(response.data.message);
+      } else {
+        console.warn(`Unexpected response format for AWB ${awb}:`, response.data);
+        throw new Error(`Invalid response format from Shiprocket API for AWB ${awb}`);
+      }
+    } catch (error: any) {
+      if (axios.isAxiosError(error) && error.response) {
+        // Log the specific error response
+        console.error(`Shiprocket API error for AWB ${awb}:`, error.response.status, error.response.data);
+        
+        // Handle specific status codes
+        if (error.response.status === 401) {
+          // Attempt to refresh token and try again
+          await this.refreshToken();
+          throw new Error(`Invalid or expired token while tracking AWB ${awb}`);
+        } else if (error.response.status === 404) {
+          throw new Error(`AWB ${awb} not found in Shiprocket system`);
+        } else {
+          throw new Error(error.response.data?.message || `API error (${error.response.status}) while tracking AWB ${awb}`);
+        }
+      } else {
+        console.error(`Error tracking shipment with AWB ${awb}:`, error);
+        throw new Error(error.message || `Failed to track shipment with AWB ${awb}`);
+      }
     }
   }
 

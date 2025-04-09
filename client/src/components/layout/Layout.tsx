@@ -9,6 +9,8 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
+  // Check if token might be invalid by examining localStorage
+  const authStorageExists = typeof window !== 'undefined' && localStorage.getItem('auth-storage');
   const { isAuthenticated } = useAuth();
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
@@ -61,6 +63,18 @@ export function Layout({ children }: LayoutProps) {
 
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header onMobileMenuToggle={toggleMobileSidebar} />
+        
+        {authStorageExists && (
+          <div className="bg-blue-50 p-2 text-center text-sm border-b border-blue-200">
+            <span className="mr-2">Having authentication issues?</span>
+            <a 
+              href="/?clearAuth=true" 
+              className="text-blue-600 font-medium hover:text-blue-800 underline"
+            >
+              Click here to clear your tokens
+            </a>
+          </div>
+        )}
 
         <main className="flex-1 overflow-auto bg-neutral-50 pb-10">
           {children}

@@ -8,6 +8,7 @@ import { ShiprocketService } from "./services/shiprocket";
 import { ShiprocketApiService, shiprocketApiService } from "./services/shiprocketApi";
 import { CronService } from "./services/cron";
 import busboy from "busboy";
+import axios from "axios";
 import { 
   insertUserSchema, 
   insertClientSchema, 
@@ -15,7 +16,8 @@ import {
   UserRole, 
   OrderStatus,
   shiprocketDataSchema,
-  ShiprocketData
+  ShiprocketData,
+  User
 } from "@shared/schema";
 
 export async function registerRoutes(app: express.Express): Promise<Server> {
@@ -611,6 +613,99 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         console.error("Sync Shiprocket orders error:", error);
         res.status(500).json({ 
           message: "An error occurred while syncing orders from Shiprocket",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    }
+  );
+  
+  // Direct fetch all orders from Shiprocket API endpoint
+  apiRouter.get(
+    "/shiprocket/all-orders",
+    authService.authenticate,
+    async (req: Request, res: Response) => {
+      try {
+        const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+        const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 20;
+        
+        // Get the client ID from the user
+        const user = (req as any).user;
+        const clientId = user.clientId;
+        
+        // Create an instance with the right credentials
+        let shiprocketApi = shiprocketApiService;
+        
+        if (clientId) {
+          const client = await storage.getClientByClientId(clientId);
+          if (client && client.shiprocket_email && client.shiprocket_password) {
+            shiprocketApi = new ShiprocketApiService(
+              client.shiprocket_email,
+              client.shiprocket_password
+            );
+          }
+        }
+        
+        // Get authentication headers
+        const headers = await (shiprocketApi as any).getHeaders();
+        
+        // Make direct API call to fetch all orders
+        try {
+          const response = await axios.get(
+            `https://apiv2.shiprocket.in/v1/external/orders?page=${page}&per_page=${pageSize}`,
+            { headers }
+          );
+          res.json(response.data);
+        } catch (apiError) {
+          console.error('Error fetching orders from Shiprocket API:', apiError);
+          
+          // Fallback to database records
+          const orders = await storage.getAllOrders(clientId || undefined);
+          
+          // Format the response to match Shiprocket API response format
+          const formattedOrders = orders.map(order => ({
+            id: order.id,
+            order_id: order.order_id,
+            order_number: order.order_id,
+            channel_order_id: order.shopify_store_id,
+            channel: order.shopify_store_id,
+            order_date: order.created_at ? new Date(order.created_at).toISOString() : new Date().toISOString(),
+            pickup_date: order.pickup_date ? new Date(order.pickup_date).toISOString() : null,
+            status: order.fulfillment_status,
+            status_code: 1,
+            awb_code: order.awb || '',
+            courier_name: 'Unknown',
+            payment_method: order.shipping_details?.payment_mode || 'COD',
+            total: order.shipping_details?.amount?.toString() || '0',
+            billing_customer_name: order.shipping_details?.name || '',
+            shipping_customer_name: order.shipping_details?.name || '',
+            shipping_address: order.shipping_details?.address || '',
+            shipping_city: order.shipping_details?.city || '',
+            shipping_state: order.shipping_details?.state || '',
+            shipping_country: order.shipping_details?.country || 'India',
+            shipping_pincode: order.shipping_details?.pincode || '',
+          }));
+          
+          // Paginate the results
+          const startIndex = (page - 1) * pageSize;
+          const endIndex = Math.min(startIndex + pageSize, formattedOrders.length);
+          const paginatedOrders = formattedOrders.slice(startIndex, endIndex);
+          
+          // Create response in the expected format
+          res.json({
+            data: {
+              orders: paginatedOrders,
+              total_pages: Math.ceil(formattedOrders.length / pageSize),
+              current_page: page,
+              from: startIndex + 1,
+              to: endIndex,
+              total: formattedOrders.length
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Error in shiprocket/all-orders endpoint:", error);
+        res.status(500).json({ 
+          message: "Failed to fetch orders", 
           error: error instanceof Error ? error.message : "Unknown error"
         });
       }

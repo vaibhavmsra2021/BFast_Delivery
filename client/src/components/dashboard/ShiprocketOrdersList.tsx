@@ -58,9 +58,9 @@ export function ShiprocketOrdersList({ maxItems = 5 }: ShiprocketOrdersListProps
       current_page: number;
     }
   }>({
-    queryKey: ['/api/shiprocket/orders', page, pageSize],
+    queryKey: ['/api/shiprocket/all-orders', page, pageSize],
     queryFn: () => 
-      fetch(`/api/shiprocket/orders?page=${page}&pageSize=${pageSize}`)
+      fetch(`/api/shiprocket/all-orders?page=${page}&pageSize=${pageSize}`)
         .then(res => {
           if (!res.ok) throw new Error('Failed to fetch orders');
           return res.json();

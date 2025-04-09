@@ -65,8 +65,15 @@ export class ShiprocketApiService {
   private baseUrl = 'https://apiv2.shiprocket.in/v1/external';
   private token: string | null = null;
   private tokenExpiry: Date | null = null;
+  private email: string | null = null;
+  private password: string | null = null;
 
-  constructor() {}
+  constructor(email?: string, password?: string) {
+    if (email && password) {
+      this.email = email;
+      this.password = password;
+    }
+  }
 
   /**
    * Test authentication with provided credentials
@@ -98,8 +105,8 @@ export class ShiprocketApiService {
       const response = await axios.post<ShiprocketAuthResponse>(
         `${this.baseUrl}/auth/login`,
         {
-          email: 'bfast.technology@gmail.com',
-          password: 'FuTe@e4HIDrub',
+          email: this.email || 'bfast.technology@gmail.com',
+          password: this.password || 'FuTe@e4HIDrub',
         }
       );
 

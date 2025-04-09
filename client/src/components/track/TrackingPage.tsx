@@ -91,15 +91,22 @@ export function TrackingPage({ trackingInfo, isLoading, error, dataSource = 'api
   
   // API response format
   if (trackingInfo.tracking_data) {
+    // Extract customer name from the shipment track data
+    const shipmentTrack = trackingInfo.tracking_data.shipment_track?.[0] || {};
+    
     parsedInfo = {
       source: 'api',
       order_id: trackingInfo.order?.order_id,
-      awb: trackingInfo.order?.awb,
-      courier_name: trackingInfo.order?.courier_name,
-      status: trackingInfo.order?.current_status || trackingInfo.order?.shipment_status,
-      current_status: trackingInfo.order?.current_status,
-      etd: trackingInfo.order?.etd,
-      current_timestamp: trackingInfo.order?.current_timestamp,
+      awb: trackingInfo.order?.awb || shipmentTrack.awb_code,
+      customer_name: shipmentTrack.consignee_name,
+      courier_name: shipmentTrack.courier_name || trackingInfo.order?.courier_name,
+      status: shipmentTrack.current_status || trackingInfo.order?.current_status || trackingInfo.order?.shipment_status,
+      current_status: shipmentTrack.current_status || trackingInfo.order?.current_status,
+      delivery_address: shipmentTrack.destination,
+      city: shipmentTrack.destination,
+      state: null,
+      etd: shipmentTrack.edd || trackingInfo.tracking_data?.etd || trackingInfo.order?.etd,
+      current_timestamp: shipmentTrack.updated_time_stamp || trackingInfo.order?.current_timestamp,
       track_url: trackingInfo.tracking_data?.track_url
     };
     

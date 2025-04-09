@@ -40,6 +40,8 @@ export const useAuth = create<AuthState>()(
 
       login: async (username: string, password: string) => {
         try {
+          console.log("Attempting to log in with username:", username);
+          
           // Don't use apiRequest here as it depends on the auth token which isn't set yet
           const response = await fetch("/api/auth/login", {
             method: "POST",
@@ -52,23 +54,31 @@ export const useAuth = create<AuthState>()(
 
           if (!response.ok) {
             const text = await response.text();
+            console.error(`Login failed with status ${response.status}: ${text}`);
             throw new Error(
               `${response.status}: ${text || response.statusText}`,
             );
           }
 
           const data = await response.json();
+          
+          if (!data.token) {
+            console.error("No token received in login response:", data);
+            throw new Error("Authentication failed: No token received");
+          }
+          
+          console.log("Login successful, saving token and user data");
 
           set({
             user: data.user,
             token: data.token,
             isAuthenticated: true,
           });
+          
+          console.log("Token and user data saved successfully");
 
-          // Force a reload on login to ensure all components get the auth state
-          setTimeout(() => {
-            window.location.href = "/home";
-          }, 100);
+          // Allow time for state to be updated and persisted before redirecting
+          return Promise.resolve();
         } catch (error) {
           console.error("Login error:", error);
           throw error;

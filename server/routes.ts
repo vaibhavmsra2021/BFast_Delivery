@@ -38,11 +38,25 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         return res.status(400).json({ message: "Username and password are required" });
       }
       
+      // Log that we're attempting to login (without showing the password)
+      console.log(`Attempting login for user: ${username}`);
+      
+      // Get user from database
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        console.log(`Login failed: User ${username} not found`);
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      // Attempt to login
       const result = await authService.login(username, password);
       
       if (!result) {
+        console.log(`Login failed: Invalid password for user ${username}`);
         return res.status(401).json({ message: "Invalid username or password" });
       }
+      
+      console.log(`Login successful for user: ${username}`);
       
       res.json({ 
         token: result.token,
@@ -57,7 +71,12 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({ message: "An error occurred during login" });
+      // Provide more detailed error information to help diagnose the issue
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        message: "An error occurred during login",
+        error: errorMessage
+      });
     }
   });
   

@@ -4,23 +4,17 @@ import { UserRole, User } from "@shared/schema";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
-// JWT Secret from environment variables or use a hardcoded secret for consistent authentication
-// Note: For a real production app, you MUST use an environment variable,
-// but for this demo app we'll use a fixed secret to avoid token mismatch issues
-// between development and production environments
-const JWT_SECRET = "bfast-shipment-management-fixed-secret-for-demo";
+// Get JWT secret from environment variables or use a default secret
+// This ensures consistent behavior across development and deployed environments
+const JWT_SECRET = process.env.JWT_SECRET || "bfast-shipment-management-fixed-secret-for-demo";
 
-// Log the JWT configuration
-console.log(`Using JWT secret for token signing/verification. Using environment secret: ${false}`);
+// Log the JWT configuration for debugging purposes
+console.log(`Using JWT secret for token signing/verification. Using environment secret: ${!!process.env.JWT_SECRET}`);
 
-// Note: The following code is commented out as we're using a fixed secret
-// Uncomment this for a real production app that uses environment variables
-/*
-const JWT_SECRET = process.env.JWT_SECRET || "default-secret-not-secure-for-production";
+// If no JWT_SECRET is set in environment, log a warning but continue with default
 if (!process.env.JWT_SECRET) {
-  console.warn("WARNING: JWT_SECRET environment variable not set, using default secret. This is insecure for production.");
+  console.warn("WARNING: JWT_SECRET environment variable not set, using default secret. This is not recommended for production.");
 }
-*/
 const JWT_EXPIRY = "24h";
 
 export class AuthService {

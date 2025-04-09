@@ -98,15 +98,7 @@ export default function LoginPage() {
           <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
-          <div className="mt-2 p-2 bg-yellow-100 dark:bg-yellow-950 border-l-4 border-yellow-500 rounded text-sm">
-            <p className="font-medium">Notice:</p>
-            <p className="text-xs">If you're experiencing login issues between development and deployed environments, <a 
-              href="/?clearAuth=true" 
-              className="text-primary font-medium underline"
-            >
-              click here to clear stored tokens
-            </a></p>
-          </div>
+
         </CardHeader>
         <CardContent>
           {error && (
@@ -115,15 +107,7 @@ export default function LoginPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
-              <div className="text-xs text-muted-foreground mb-4 p-2 border rounded bg-muted/20">
-                <p className="mb-1">Having trouble signing in? Try clearing your stored tokens:</p>
-                <a 
-                  href="/?clearAuth=true" 
-                  className="text-primary underline hover:text-primary/80"
-                >
-                  Click here to reset authentication
-                </a>
-              </div>
+
             </>
           )}
 

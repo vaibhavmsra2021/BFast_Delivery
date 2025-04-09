@@ -117,6 +117,12 @@ export const syncShopifyOrders = async () => {
 
 // Tracking API
 export const getTrackingInfo = async (awb: string) => {
+  const response = await apiRequest('GET', `/api/shiprocket/track/${awb}`);
+  return response.json();
+};
+
+// Fallback tracking using our database
+export const getFallbackTrackingInfo = async (awb: string) => {
   const response = await apiRequest('GET', `/api/track/${awb}`);
   return response.json();
 };

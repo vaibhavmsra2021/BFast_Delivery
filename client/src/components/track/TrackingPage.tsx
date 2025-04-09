@@ -47,9 +47,10 @@ interface TrackingPageProps {
   trackingInfo: TrackingInfo | null;
   isLoading: boolean;
   error: string | null;
+  dataSource?: 'api' | 'database';
 }
 
-export function TrackingPage({ trackingInfo, isLoading, error }: TrackingPageProps) {
+export function TrackingPage({ trackingInfo, isLoading, error, dataSource = 'api' }: TrackingPageProps) {
   const [statusPercentage, setStatusPercentage] = useState(0);
 
   useEffect(() => {
@@ -163,9 +164,19 @@ export function TrackingPage({ trackingInfo, isLoading, error }: TrackingPagePro
           <CardHeader className="pb-0">
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="text-xl">
-                  Tracking #{trackingInfo.order.awb}
-                </CardTitle>
+                <div className="flex items-center mb-1">
+                  <CardTitle className="text-xl">
+                    Tracking #{trackingInfo.order.awb}
+                  </CardTitle>
+                  {dataSource && (
+                    <Badge 
+                      variant={dataSource === 'api' ? "default" : "outline"}
+                      className={`ml-2 ${dataSource === 'api' ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}
+                    >
+                      {dataSource === 'api' ? 'API' : 'Database'}
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-sm text-neutral-500">
                   Order #{trackingInfo.order.order_id}
                 </p>

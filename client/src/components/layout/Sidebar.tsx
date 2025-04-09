@@ -10,7 +10,8 @@ import {
   Globe,
   UserPlus,
   Users,
-  Database
+  Database,
+  Package
 } from "lucide-react";
 
 interface SidebarLinkProps {
@@ -61,6 +62,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
   const showTrack = true;
   const showManifest = isBfastAdmin || isBfastExec || isClientAdmin;
   const showShiprocketData = isBfastAdmin || isBfastExec || isClientAdmin;
+  const showShiprocketOrders = isBfastAdmin || isBfastExec;
   const showChannels = isBfastAdmin;
   const showAddClient = isBfastAdmin;
   const showAddUser = isBfastAdmin || isClientAdmin;
@@ -136,6 +138,16 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
               active={location === "/shiprocket-data"}
             >
               Shiprocket Data
+            </SidebarLink>
+          )}
+          
+          {showShiprocketOrders && (
+            <SidebarLink 
+              href="/shiprocket-orders" 
+              icon={<Package className="text-current" />}
+              active={location === "/shiprocket-orders"}
+            >
+              Shiprocket Orders
             </SidebarLink>
           )}
           

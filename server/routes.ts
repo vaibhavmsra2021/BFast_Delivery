@@ -5,6 +5,7 @@ import { z } from "zod";
 import { AuthService } from "./services/auth";
 import { ShopifyService } from "./services/shopify";
 import { ShiprocketService } from "./services/shiprocket";
+import { ShiprocketApiService, shiprocketApiService } from "./services/shiprocketApi";
 import { CronService } from "./services/cron";
 import busboy from "busboy";
 import { 
@@ -531,6 +532,67 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
       } catch (error) {
         console.error("Sync orders error:", error);
         res.status(500).json({ message: "An error occurred while syncing orders" });
+      }
+    }
+  );
+  
+  // Shiprocket API Integration
+  
+  // Get orders from Shiprocket API
+  apiRouter.get(
+    "/shiprocket/orders",
+    authService.authenticate,
+    async (req: Request, res: Response) => {
+      try {
+        const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+        const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 20;
+        
+        const orders = await shiprocketApiService.getOrders(page, pageSize);
+        res.json(orders);
+      } catch (error) {
+        console.error("Get Shiprocket orders error:", error);
+        res.status(500).json({ 
+          message: "An error occurred while retrieving orders from Shiprocket",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    }
+  );
+  
+  // Sync orders from Shiprocket to our database
+  apiRouter.post(
+    "/shiprocket/sync",
+    authService.authenticate,
+    authService.authorize([UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE]),
+    async (req: Request, res: Response) => {
+      try {
+        await shiprocketApiService.syncOrdersToDatabase();
+        res.json({ message: "Orders synced successfully from Shiprocket" });
+      } catch (error) {
+        console.error("Sync Shiprocket orders error:", error);
+        res.status(500).json({ 
+          message: "An error occurred while syncing orders from Shiprocket",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    }
+  );
+  
+  // Track shipment using AWB number via Shiprocket API
+  apiRouter.get(
+    "/shiprocket/track/:awb",
+    authService.authenticate,
+    async (req: Request, res: Response) => {
+      try {
+        const { awb } = req.params;
+        const trackingInfo = await shiprocketApiService.trackShipment(awb);
+        res.json(trackingInfo);
+      } catch (error) {
+        console.error(`Error tracking shipment with AWB ${req.params.awb}:`, error);
+        res.status(500).json({ 
+          message: `Failed to track shipment with AWB ${req.params.awb}`,
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
       }
     }
   );

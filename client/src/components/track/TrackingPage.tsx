@@ -334,7 +334,7 @@ export function TrackingPage({ trackingInfo, isLoading, error, dataSource = 'api
                     <div className="absolute left-0 top-1.5 rounded-full bg-primary p-1">
                       {index === 0 ? (
                         <Package className="h-3 w-3 text-primary-foreground" />
-                      ) : index === displayHistory.length - 1 && step.status.toLowerCase().includes('delivered') ? (
+                      ) : index === displayHistory.length - 1 && step.status && step.status.toLowerCase().includes('delivered') ? (
                         <CheckCircle className="h-3 w-3 text-primary-foreground" />
                       ) : (
                         <TruckIcon className="h-3 w-3 text-primary-foreground" />
@@ -343,13 +343,13 @@ export function TrackingPage({ trackingInfo, isLoading, error, dataSource = 'api
                     
                     <div className="flex flex-col sm:flex-row sm:justify-between">
                       <div className="mb-1 sm:mb-0">
-                        <h4 className="font-medium">{step.status}</h4>
-                        <p className="text-sm text-neutral-600">{step.activity}</p>
+                        <h4 className="font-medium">{step.status || 'Status Update'}</h4>
+                        <p className="text-sm text-neutral-600">{step.activity || ''}</p>
                       </div>
                       <div className="text-sm text-neutral-500 sm:text-right">
-                        <div>{new Date(step.date).toLocaleDateString()}</div>
-                        <div>{new Date(step.date).toLocaleTimeString()}</div>
-                        <div>{step.location}</div>
+                        <div>{step.date ? new Date(step.date).toLocaleDateString() : 'Unknown date'}</div>
+                        <div>{step.date ? new Date(step.date).toLocaleTimeString() : ''}</div>
+                        <div>{step.location || 'Unknown location'}</div>
                       </div>
                     </div>
                   </div>

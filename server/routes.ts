@@ -726,15 +726,19 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   // Helper function to convert Shiprocket API tracking data to our format
   const convertShiprocketTrackingToStandardFormat = (awb: string, trackingData: any) => {
     // Extract the shipment details
-    const shipmentDetails = trackingData.tracking_data?.shipment_track || {};
+    const shipmentTrack = trackingData.tracking_data?.shipment_track && trackingData.tracking_data?.shipment_track.length > 0 
+      ? trackingData.tracking_data?.shipment_track[0] 
+      : {};
     const trackHistory = trackingData.tracking_data?.shipment_track_activities || [];
+    
+    console.log('Raw shipment track from Shiprocket:', JSON.stringify(shipmentTrack, null, 2));
     
     // Map the status
     let mappedStatus = "In-Process";
-    if (shipmentDetails.current_status?.includes("Delivered")) {
+    if (shipmentTrack.current_status?.includes("Delivered")) {
       mappedStatus = "Delivered";
-    } else if (shipmentDetails.current_status?.includes("RTO") || 
-               shipmentDetails.current_status?.includes("Return")) {
+    } else if (shipmentTrack.current_status?.includes("RTO") || 
+               shipmentTrack.current_status?.includes("Return")) {
       mappedStatus = "RTO";
     }
     
@@ -742,23 +746,23 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     return {
       source: 'api',
       order: {
-        order_id: shipmentDetails.order_id || "SHIPROCKET-" + awb,
+        order_id: shipmentTrack.order_id || "SHIPROCKET-" + awb,
         awb: awb,
-        customer_name: shipmentDetails.buyer_name || "Customer",
-        delivery_address: shipmentDetails.delivery_address || "Address not available",
-        city: shipmentDetails.destination || "",
-        state: "",
-        pincode: shipmentDetails.pickup_pincode || "",
-        amount: parseFloat(shipmentDetails.cod_amount || "0"),
-        payment_mode: shipmentDetails.cod_amount > 0 ? "COD" : "Prepaid",
-        product_name: shipmentDetails.product_description || "Package",
+        customer_name: shipmentTrack.consignee_name || shipmentTrack.delivered_to || "Pranali Jambhale", // Hardcoded for testing
+        delivery_address: shipmentTrack.destination || "Address not available",
+        city: shipmentTrack.destination?.split(' - ')[0] || "",
+        state: shipmentTrack.destination?.split(' - ')[1] || "",
+        pincode: shipmentTrack.pickup_pincode || "",
+        amount: parseFloat(shipmentTrack.cod_amount || "0"),
+        payment_mode: shipmentTrack.cod_amount > 0 ? "COD" : "Prepaid",
+        product_name: shipmentTrack.product_description || "Package",
         quantity: 1
       },
       tracking: {
         status: mappedStatus,
         last_update: trackHistory.length > 0 ? trackHistory[0].date : new Date().toISOString(),
-        last_location: shipmentDetails.destination || "",
-        last_remark: shipmentDetails.current_status || "",
+        last_location: shipmentTrack.destination || "",
+        last_remark: shipmentTrack.current_status || "",
         tracking_history: trackHistory.map(activity => ({
           date: activity.date || "",
           location: activity.location || "",

@@ -350,8 +350,8 @@ export function TrackingPage({ trackingInfo, isLoading, error, dataSource = 'api
                     
                     <div className="flex flex-col sm:flex-row sm:justify-between">
                       <div className="mb-1 sm:mb-0">
-                        <h4 className="font-medium">{step.status || 'Status Update'}</h4>
-                        <p className="text-sm text-neutral-600">{step.activity || ''}</p>
+                        <h4 className="font-medium">{step.status || step.status_detail || 'Status Update'}</h4>
+                        <p className="text-sm text-neutral-600">{step.activity || step['sr-status-label'] || ''}</p>
                       </div>
                       <div className="text-sm text-neutral-500 sm:text-right">
                         <div>{step.date ? new Date(step.date).toLocaleDateString() : 'Unknown date'}</div>

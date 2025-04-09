@@ -432,8 +432,8 @@ export class ShiprocketApiService {
    */
   async syncOrdersToDatabase(): Promise<void> {
     try {
-      // Get orders from Shiprocket
-      const shiprocketOrdersData = await this.getOrders(1, 100);
+      // Get orders from Shiprocket using the updated getAllOrders method that handles the new format
+      const shiprocketOrdersData = await this.getAllOrders(1, 100);
       
       // Check if we have valid data
       if (!shiprocketOrdersData || !shiprocketOrdersData.data || !shiprocketOrdersData.data.orders) {
@@ -449,63 +449,79 @@ export class ShiprocketApiService {
         return;
       }
       
+      console.log(`Found ${shiprocketOrders.length} orders from Shiprocket to sync to database`);
+      let created = 0;
+      let updated = 0;
+      
       // For each order, check if it exists in our database
       for (const order of shiprocketOrders) {
-        if (!order.awb_code) {
-          console.warn('Skipping order without AWB code:', order.order_id);
-          continue;
+        // Generate order ID from Shiprocket data
+        const orderId = order.order_id || order.channel_order_id || String(order.id);
+        
+        // Check if order exists by order ID
+        const existingOrderById = await storage.getOrderByOrderId(orderId);
+        let existingOrder = existingOrderById;
+        
+        // If not found by ID, try AWB if available
+        if (!existingOrder && order.awb_code) {
+          existingOrder = await storage.getOrderByAWB(order.awb_code);
         }
         
-        // Check if order exists by AWB
-        const existingOrder = await storage.getOrderByAWB(order.awb_code);
+        // Create a standard order object from Shiprocket data
+        const orderData = {
+          client_id: 'SHIPROCKET', // Default client ID for Shiprocket orders
+          shopify_store_id: order.channel || 'Custom',
+          order_id: orderId,
+          awb: order.awb_code || '',
+          fulfillment_status: this.mapShiprocketStatusToOurStatus(order.status),
+          shipping_details: {
+            name: order.shipping_customer_name || order.billing_customer_name || '',
+            email: order.shipping_email || '',
+            phone_1: order.shipping_phone || '',
+            address: order.shipping_address || '',
+            city: order.shipping_city || '',
+            state: order.shipping_state || '',
+            country: order.shipping_country || 'India',
+            pincode: order.shipping_pincode || '',
+            payment_mode: order.payment_method || 'COD',
+            shipping_method: 'Standard', // Default shipping method
+            amount: parseFloat(order.total) || 0
+          },
+          product_details: {
+            product_name: `Order from ${order.channel || 'Shiprocket'}`,
+            category: 'Default',
+            quantity: 1, // Default quantity
+            price: parseFloat(order.total) || 0,
+            dimensions: [10, 10, 10] as [number, number, number], // Default dimensions [length, width, height]
+            weight: 0.5 // Default weight in kg
+          },
+          pickup_date: order.pickup_date ? new Date(order.pickup_date) : null,
+          created_at: order.order_date ? new Date(order.order_date) : new Date()
+        };
         
         if (!existingOrder) {
           // Create new order if it doesn't exist
-          // Map Shiprocket order format to our database format
-          const newOrder = {
-            client_id: 'SHIPROCKET', // Default client ID for Shiprocket orders
-            shopify_store_id: order.channel || 'shiprocket',
-            order_id: order.order_id || String(order.id),
-            awb: order.awb_code,
+          await storage.createOrder(orderData);
+          created++;
+        } else {
+          // Update existing order with new data
+          await storage.updateOrder(existingOrder.id, {
+            awb: order.awb_code || existingOrder.awb || '',
             fulfillment_status: this.mapShiprocketStatusToOurStatus(order.status),
             shipping_details: {
-              name: order.shipping_customer_name || '',
-              email: order.shipping_email || '',
-              phone_1: order.shipping_phone || '',
-              address: order.shipping_address || '',
-              city: order.shipping_city || '',
-              state: order.shipping_state || '',
-              country: order.shipping_country || 'India',
-              pincode: order.shipping_pincode || '',
-              payment_mode: order.payment_method || 'COD',
-              shipping_method: 'Standard', // Default shipping method
-              amount: parseFloat(order.total) || 0
+              ...existingOrder.shipping_details,
+              ...orderData.shipping_details
             },
             product_details: {
-              product_name: `Order from ${order.channel || 'Shiprocket'}`,
-              category: 'Default',
-              quantity: 1, // Default quantity
-              price: parseFloat(order.subtotal) || 0,
-              dimensions: [10, 10, 10] as [number, number, number], // Default dimensions [length, width, height]
-              weight: 0.5 // Default weight in kg
-            },
-            pickup_date: order.pickup_date || null,
-            created_at: order.order_date ? new Date(order.order_date) : new Date()
-          };
-          
-          await storage.createOrder(newOrder);
-        } else {
-          // Update existing order
-          const updatedOrder = {
-            fulfillment_status: this.mapShiprocketStatusToOurStatus(order.status),
-            awb: order.awb_code
-          };
-          
-          await storage.updateOrder(existingOrder.id, updatedOrder);
+              ...existingOrder.product_details,
+              price: parseFloat(order.total) || existingOrder.product_details.price
+            }
+          });
+          updated++;
         }
       }
       
-      console.log(`Synced ${shiprocketOrders.length} orders from Shiprocket`);
+      console.log(`Synced ${shiprocketOrders.length} orders from Shiprocket: ${created} created, ${updated} updated`);
     } catch (error) {
       console.error('Error syncing orders from Shiprocket:', error);
       throw new Error('Failed to sync orders from Shiprocket');

@@ -651,6 +651,16 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
           const response = await shiprocketApi.getAllOrders(page, pageSize);
           console.log('Orders fetched successfully from Shiprocket API:', 
             response.data.orders ? `${response.data.orders.length} orders found` : 'No orders found');
+            
+          // Sync orders to database in the background (non-blocking)
+          setTimeout(async () => {
+            try {
+              await shiprocketApi.syncOrdersToDatabase();
+            } catch (syncError) {
+              console.error("Background sync error:", syncError);
+            }
+          }, 100);
+          
           res.json({
             ...response,
             source: 'api' // Indicate data is coming from the API

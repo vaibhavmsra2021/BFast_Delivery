@@ -17,7 +17,6 @@ import AddClient from "@/pages/AddClient";
 import AddUser from "@/pages/AddUser";
 import PublicTrack from "@/pages/PublicTrack";
 import ShiprocketData from "@/pages/ShiprocketData";
-import ShiprocketOrders from "@/pages/ShiprocketOrders";
 import ProfilePage from "@/pages/ProfilePage";
 import NotFound from "@/pages/not-found";
 
@@ -123,12 +122,7 @@ function Router() {
         />
       </Route>
       
-      <Route path="/shiprocket-orders">
-        <ProtectedRoute 
-          component={ShiprocketOrders} 
-          roles={[UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE]}
-        />
-      </Route>
+
 
       <Route path="/profile">
         <ProtectedRoute component={ProfilePage} />

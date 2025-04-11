@@ -898,9 +898,62 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         // Save the parsed data
         await storage.saveShiprocketData(parsedData);
         
+        // Create actual orders from the CSV data with auto-assigned AWBs for those without them
+        const createdOrders = [];
+        for (const entry of parsedData) {
+          try {
+            // Generate AWB if none exists
+            const awb = entry.awb || shiprocketApiService.generateUniqueAWB();
+            
+            // Check if order with same AWB already exists
+            const existingOrder = await storage.getOrderByAWB(awb);
+            if (existingOrder) {
+              console.log(`Order with AWB ${awb} already exists, skipping`);
+              continue;
+            }
+            
+            // Create order object
+            const orderData = {
+              client_id: entry.client_id || 'SHIPROCKET',
+              shopify_store_id: entry.channel || 'CSV_Upload',
+              order_id: entry.order_id || `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              awb: awb,
+              fulfillment_status: entry.delivery_status as OrderStatusType,
+              shipping_details: {
+                name: entry.customer_name || 'Customer',
+                email: entry.customer_email || '',
+                phone_1: entry.customer_phone || '',
+                address: entry.shipping_address || '',
+                city: entry.shipping_city || '',
+                state: entry.shipping_state || '',
+                pincode: entry.shipping_pincode || '',
+                payment_mode: entry.payment_mode || 'COD',
+                shipping_method: 'Standard',
+                amount: parseFloat(entry.order_amount?.toString() || '0')
+              },
+              product_details: {
+                product_name: entry.item_name || 'Product',
+                category: entry.item_category || 'Default',
+                quantity: parseInt(entry.quantity?.toString() || '1'),
+                dimensions: [10, 10, 10] as [number, number, number],
+                weight: parseFloat(entry.item_weight?.toString() || '0.5')
+              },
+              pickup_date: entry.pickup_date ? new Date(entry.pickup_date) : null,
+              created_at: entry.order_date ? new Date(entry.order_date) : new Date()
+            };
+            
+            // Create the order
+            const newOrder = await storage.createOrder(orderData);
+            createdOrders.push(newOrder);
+          } catch (orderError) {
+            console.error('Error creating order from CSV data:', orderError);
+          }
+        }
+        
         res.status(200).json({ 
           message: "Shiprocket data uploaded successfully", 
-          count: parsedData.length 
+          count: parsedData.length,
+          ordersCreated: createdOrders.length
         });
       } catch (error) {
         console.error("Upload Shiprocket data error:", error);

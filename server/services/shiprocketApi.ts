@@ -67,12 +67,24 @@ export class ShiprocketApiService {
   private tokenExpiry: Date | null = null;
   private email: string | null = null;
   private password: string | null = null;
+  // Maintain a counter for auto-generated AWBs
+  private static awbCounter = 1000000;
 
   constructor(email?: string, password?: string) {
     if (email && password) {
       this.email = email;
       this.password = password;
     }
+  }
+  
+  /**
+   * Generate a unique AWB number for orders without one
+   * This is used when Shiprocket API fails or when we need to provide a placeholder
+   */
+  generateUniqueAWB(): string {
+    // Prefix with "AUTO" to distinguish from real AWBs
+    ShiprocketApiService.awbCounter++;
+    return `AUTO${ShiprocketApiService.awbCounter}`;
   }
 
   /**
@@ -521,11 +533,14 @@ export class ShiprocketApiService {
         }
         
         // Create a standard order object from Shiprocket data
+        // Auto-generate AWB if none exists
+        const autoAssignedAwb = !order.awb_code ? this.generateUniqueAWB() : '';
+        
         const orderData = {
           client_id: 'SHIPROCKET', // Default client ID for Shiprocket orders
           shopify_store_id: order.channel || 'Custom',
           order_id: orderId,
-          awb: order.awb_code || '',
+          awb: order.awb_code || autoAssignedAwb,
           fulfillment_status: this.mapShiprocketStatusToOurStatus(order.status),
           shipping_details: {
             name: order.shipping_customer_name || order.billing_customer_name || '',
@@ -558,8 +573,11 @@ export class ShiprocketApiService {
           created++;
         } else {
           // Update existing order with new data
+          // If we already have an AWB (including auto-assigned ones), don't overwrite it with empty string
+          const newAwb = order.awb_code || existingOrder.awb || autoAssignedAwb;
+          
           await storage.updateOrder(existingOrder.id, {
-            awb: order.awb_code || existingOrder.awb || '',
+            awb: newAwb,
             fulfillment_status: this.mapShiprocketStatusToOurStatus(order.status),
             shipping_details: {
               ...existingOrder.shipping_details,

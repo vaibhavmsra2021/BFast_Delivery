@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getPendingOrders, updateOrder, bulkUpdateOrders } from "@/lib/api";
 import { OrderTable } from "@/components/orders/OrderTable";
 import { CSVUpload } from "@/components/orders/CSVUpload";
+import { AutoAssignAWBButton } from "@/components/orders/AutoAssignAWBButton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";

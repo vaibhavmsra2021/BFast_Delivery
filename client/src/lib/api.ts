@@ -150,3 +150,10 @@ export const getShiprocketCSVData = async (filters?: any) => {
   const response = await apiRequest('GET', `/api/shiprocket/data${queryParams}`);
   return response.json();
 };
+
+// Auto-assign AWB numbers to orders without AWB
+export const autoAssignAWB = async (clientId?: string) => {
+  const payload = clientId ? { client_id: clientId } : {};
+  const response = await apiRequest('POST', '/api/orders/auto-assign-awb', payload);
+  return response.json();
+};

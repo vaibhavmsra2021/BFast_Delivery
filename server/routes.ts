@@ -15,6 +15,9 @@ import {
   insertOrderSchema, 
   UserRole, 
   OrderStatus,
+  OrderStatusType,
+  ShippingMethodType,
+  PaymentModeType,
   shiprocketDataSchema,
   ShiprocketData,
   User
@@ -799,7 +802,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
         last_update: trackHistory.length > 0 ? trackHistory[0].date : new Date().toISOString(),
         last_location: shipmentTrack.destination || "",
         last_remark: shipmentTrack.current_status || "",
-        tracking_history: trackHistory.map(activity => ({
+        tracking_history: trackHistory.map((activity: any) => ({
           date: activity.date || "",
           location: activity.location || "",
           status_detail: activity.activity || ""

@@ -477,6 +477,42 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   );
   
+  // Auto-assign AWB to orders without AWB
+  apiRouter.post(
+    "/orders/auto-assign-awb",
+    authService.authenticate,
+    authService.authorize([UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE, UserRole.CLIENT_ADMIN]),
+    async (req: Request, res: Response) => {
+      try {
+        // If client_id is provided, filter by it
+        const clientId = req.body.client_id;
+        
+        // Get orders without AWB
+        const allOrders = await storage.getAllOrders(clientId);
+        const ordersWithoutAwb = allOrders.filter(order => !order.awb || order.awb.trim() === '');
+        
+        console.log(`Found ${ordersWithoutAwb.length} orders without AWB to auto-assign`);
+        
+        // Assign AWB to each order
+        const updatedOrders = [];
+        for (const order of ordersWithoutAwb) {
+          const newAwb = shiprocketApiService.generateUniqueAWB();
+          const updated = await storage.updateOrder(order.id, { awb: newAwb });
+          updatedOrders.push(updated);
+        }
+        
+        res.status(200).json({
+          message: `Successfully assigned AWB numbers to ${updatedOrders.length} orders`,
+          updatedCount: updatedOrders.length,
+          orders: updatedOrders
+        });
+      } catch (error) {
+        console.error("Error auto-assigning AWB numbers:", error);
+        res.status(500).json({ message: "An error occurred while auto-assigning AWB numbers" });
+      }
+    }
+  );
+  
   // Bulk order update
   apiRouter.post(
     "/orders/bulk-update", 
@@ -915,28 +951,28 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
             // Create order object
             const orderData = {
               client_id: entry.client_id || 'SHIPROCKET',
-              shopify_store_id: entry.channel || 'CSV_Upload',
-              order_id: entry.order_id || `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              shopify_store_id: entry.sale_channel || 'CSV_Upload',
+              order_id: entry.sale_order_number || `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
               awb: awb,
-              fulfillment_status: entry.delivery_status as OrderStatusType,
+              fulfillment_status: (entry.delivery_status as string || 'Pending') as OrderStatusType,
               shipping_details: {
-                name: entry.customer_name || 'Customer',
+                name: (entry.customer_first_name || '') + ' ' + (entry.customer_last_name || ''),
                 email: entry.customer_email || '',
                 phone_1: entry.customer_phone || '',
                 address: entry.shipping_address || '',
                 city: entry.shipping_city || '',
                 state: entry.shipping_state || '',
                 pincode: entry.shipping_pincode || '',
-                payment_mode: entry.payment_mode || 'COD',
-                shipping_method: 'Standard',
-                amount: parseFloat(entry.order_amount?.toString() || '0')
+                payment_mode: (entry.payment_mode as string || 'COD') as PaymentModeType,
+                shipping_method: 'Standard' as ShippingMethodType,
+                amount: parseFloat(entry.cod_amount?.toString() || '0')
               },
               product_details: {
-                product_name: entry.item_name || 'Product',
+                product_name: entry.item_description || 'Product',
                 category: entry.item_category || 'Default',
                 quantity: parseInt(entry.quantity?.toString() || '1'),
                 dimensions: [10, 10, 10] as [number, number, number],
-                weight: parseFloat(entry.item_weight?.toString() || '0.5')
+                weight: 0.5
               },
               pickup_date: entry.pickup_date ? new Date(entry.pickup_date) : null,
               created_at: entry.order_date ? new Date(entry.order_date) : new Date()

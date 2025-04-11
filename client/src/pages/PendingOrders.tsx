@@ -270,10 +270,15 @@ export default function PendingOrders() {
           </TabsList>
           
           <TabsContent value="orders">
-            <div className="flex justify-end mb-4">
-              <Button variant="outline" className="mr-2">
-                Download CSV
-              </Button>
+            <div className="flex justify-between mb-4">
+              <div className="flex">
+                <AutoAssignAWBButton />
+              </div>
+              <div className="flex">
+                <Button variant="outline" className="mr-2">
+                  Download CSV
+                </Button>
+              </div>
             </div>
             
             <OrderTable

@@ -9,12 +9,14 @@ interface AutoAssignAWBButtonProps {
   clientId?: string;
   variant?: 'default' | 'outline' | 'destructive' | 'secondary' | 'ghost' | 'link';
   size?: 'default' | 'sm' | 'lg' | 'icon';
+  className?: string;
 }
 
 export function AutoAssignAWBButton({ 
   clientId, 
   variant = 'default',
-  size = 'default'
+  size = 'default',
+  className = ''
 }: AutoAssignAWBButtonProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();

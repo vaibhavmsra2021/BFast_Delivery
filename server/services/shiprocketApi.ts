@@ -147,10 +147,19 @@ export class ShiprocketApiService {
           statusText: error.response.statusText,
           data: error.response.data
         });
+        
+        // Provide a more helpful error message based on the status code
+        if (error.response.status === 401) {
+          throw new Error('Shiprocket API authentication failed: Invalid email or password. Please update your credentials in client settings.');
+        } else if (error.response.status === 429) {
+          throw new Error('Shiprocket API rate limit exceeded. Please try again later.');
+        } else {
+          throw new Error(`Shiprocket API error (${error.response.status}): ${error.response.data?.message || error.message}`);
+        }
       } else {
         console.error('Error authenticating with Shiprocket:', error);
+        throw new Error('Failed to connect to Shiprocket API. Please check your internet connection and try again.');
       }
-      throw new Error('Failed to authenticate with Shiprocket');
     }
   }
 
@@ -441,15 +450,19 @@ export class ShiprocketApiService {
         // Log the specific error response
         console.error(`Shiprocket API error for AWB ${awb}:`, error.response.status, error.response.data);
         
-        // Handle specific status codes
+        // Handle specific status codes with more informative messages
         if (error.response.status === 401) {
-          // Attempt to refresh token and try again
+          // Attempt to refresh token and provide specific guidance
           await this.refreshToken();
-          throw new Error(`Invalid or expired token while tracking AWB ${awb}`);
+          throw new Error(`Shiprocket API authentication failed for AWB ${awb}. Please verify your Shiprocket credentials in client settings or contact support.`);
         } else if (error.response.status === 404) {
-          throw new Error(`AWB ${awb} not found in Shiprocket system`);
+          throw new Error(`AWB ${awb} not found in Shiprocket system. Please verify the AWB number is correct.`);
+        } else if (error.response.status === 429) {
+          throw new Error(`Shiprocket API rate limit exceeded. Please try again in a few minutes.`);
+        } else if (error.response.status >= 500) {
+          throw new Error(`Shiprocket API server error (${error.response.status}). This is an issue with Shiprocket's servers, please try again later.`);
         } else {
-          throw new Error(error.response.data?.message || `API error (${error.response.status}) while tracking AWB ${awb}`);
+          throw new Error(error.response.data?.message || `Shiprocket API error (${error.response.status}) while tracking AWB ${awb}`);
         }
       } else {
         console.error(`Error tracking shipment with AWB ${awb}:`, error);

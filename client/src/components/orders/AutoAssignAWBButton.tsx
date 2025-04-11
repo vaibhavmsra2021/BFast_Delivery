@@ -53,6 +53,7 @@ export function AutoAssignAWBButton({
       size={size}
       onClick={handleClick}
       disabled={isProcessing}
+      className={className}
     >
       {isProcessing ? (
         <>

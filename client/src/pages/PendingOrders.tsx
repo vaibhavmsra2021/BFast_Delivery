@@ -61,6 +61,9 @@ export default function PendingOrders() {
     queryKey: ['/api/orders/pending'],
     placeholderData: []
   });
+  
+  // Add this to ensure the orders are properly loaded
+  const pendingOrdersData = pendingOrders || [];
 
   // Mutation for updating order
   const updateOrderMutation = useMutation({
@@ -250,7 +253,7 @@ export default function PendingOrders() {
     }
   };
 
-  const transformedOrders = transformOrders(pendingOrders);
+  const transformedOrders = transformOrders(pendingOrdersData);
 
   return (
     <div className="py-6">

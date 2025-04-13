@@ -61,7 +61,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
   const showOrderData = true;
   const showTrack = true;
   const showManifest = isBfastAdmin || isBfastExec || isClientAdmin;
-  const showShiprocketData = isBfastAdmin || isBfastExec || isClientAdmin;
+
   const showChannels = isBfastAdmin;
   const showAddClient = isBfastAdmin;
   const showAddUser = isBfastAdmin || isClientAdmin;
@@ -130,15 +130,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
             </SidebarLink>
           )}
           
-          {showShiprocketData && (
-            <SidebarLink 
-              href="/shiprocket-data" 
-              icon={<Database className="text-current" />}
-              active={location === "/shiprocket-data"}
-            >
-              Shiprocket Data
-            </SidebarLink>
-          )}
+          {/* Shiprocket Data link has been removed */}
           
 
           

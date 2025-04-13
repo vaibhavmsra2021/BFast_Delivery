@@ -874,36 +874,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   });
 
-  // Shiprocket CSV data routes - CSV upload functionality has been removed
-  
-  apiRouter.get(
-    "/shiprocket/data",
-    authService.authenticate,
-    async (req: Request, res: Response) => {
-      try {
-        const filters: Record<string, string> = {};
-        
-        // Extract filters from query params
-        const allowedFilters = [
-          'delivery_status', 'client_id', 'month', 'awb', 'courier_type',
-          'payment_mode', 'shipping_city', 'shipping_state', 'item_category'
-        ];
-        
-        allowedFilters.forEach(filter => {
-          if (req.query[filter]) {
-            filters[filter] = req.query[filter] as string;
-          }
-        });
-        
-        const data = await storage.getShiprocketData(Object.keys(filters).length > 0 ? filters : undefined);
-        
-        res.json(data);
-      } catch (error) {
-        console.error("Get Shiprocket data error:", error);
-        res.status(500).json({ message: "An error occurred while retrieving Shiprocket data" });
-      }
-    }
-  );
+  // Shiprocket data routes have been removed
   
   // Use API router
   app.use("/api", apiRouter);

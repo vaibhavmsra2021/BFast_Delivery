@@ -18,10 +18,28 @@ export default function OrderData() {
     paymentMode: "",
   });
 
-  // Fetch all orders
+  // Fetch all orders from both database and Shiprocket API
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ['/api/orders', filters],
     queryFn: () => getAllOrders(filters),
+  });
+  
+  // Fetch additional orders from Shiprocket API
+  const { data: shiprocketOrdersData, isLoading: isLoadingShiprocket } = useQuery({
+    queryKey: ['/api/shiprocket/all-orders'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/shiprocket/all-orders');
+        if (!response.ok) {
+          throw new Error('Failed to fetch Shiprocket orders');
+        }
+        const data = await response.json();
+        return data.data?.orders || [];
+      } catch (error) {
+        console.error('Error fetching Shiprocket orders:', error);
+        return [];
+      }
+    }
   });
 
   // Mutation for updating order
@@ -122,7 +140,64 @@ export default function OrderData() {
     updateOrderMutation.mutate({ orderId, data: apiData });
   };
 
-  const transformedOrders = transformOrders(ordersData);
+  // Transform Shiprocket orders for display
+  const transformShiprocketOrders = (orders: any[] = []) => {
+    return orders.map((order) => {
+      // Create shipping details object structure
+      const shippingDetails = {
+        customer_name: order.customer_name || 'Unknown Customer',
+        customer_phone: order.customer_phone || '',
+        customer_email: order.customer_email || '',
+        address: order.customer_address || '',
+        city: order.customer_city || '',
+        state: order.customer_state || '',
+        pin_code: order.customer_pincode || '',
+        payment_mode: order.payment_method || 'Unknown',
+      };
+      
+      // Create product details array
+      const productDetails = order.products ? order.products.map((product: any) => ({
+        name: product.name || 'Unknown Product',
+        quantity: product.quantity || 0,
+        total: parseFloat(product.price || '0'),
+        dimensions: product.dimensions || '',
+        weight: product.weight || '',
+      })) : [];
+      
+      return {
+        id: order.id || Math.random().toString(),
+        order_id: order.order_id || '',
+        created_at: order.created_at || new Date().toISOString(),
+        delivery_status: order.status || 'Pending',
+        fulfillment_status: order.status || 'Pending',
+        awb: order.awb || '',
+        courier: order.courier_name || '',
+        shipping_details: shippingDetails,
+        product_details: productDetails,
+        source: 'shiprocket' // Add a source indicator
+      };
+    });
+  };
+  
+  // Process database orders
+  const dbOrders = transformOrders(ordersData || []);
+  
+  // Process Shiprocket orders
+  const shiprocketOrders = transformOrders(transformShiprocketOrders(shiprocketOrdersData || []));
+  
+  // Combine both sets of orders, removing duplicates by AWB number
+  const allOrders = [...dbOrders];
+  
+  // Add Shiprocket orders if they don't already exist in dbOrders
+  if (shiprocketOrders && shiprocketOrders.length > 0) {
+    shiprocketOrders.forEach(shiprocketOrder => {
+      if (shiprocketOrder.awb && !dbOrders.some(dbOrder => dbOrder.awb === shiprocketOrder.awb)) {
+        allOrders.push(shiprocketOrder);
+      }
+    });
+  }
+  
+  const transformedOrders = allOrders;
 
   return (
     <div className="py-6">

@@ -185,7 +185,9 @@ export function OrderTable({
                       </TableRow>
                     ))
                 ) : orders.length > 0 ? (
-                  orders.map((order) => (
+                  orders
+                    .slice((page - 1) * pageSize, page * pageSize)
+                    .map((order) => (
                     <TableRow
                       key={order.id}
                       className="hover:bg-neutral-50 cursor-pointer"

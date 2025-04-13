@@ -151,15 +151,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
                   </SidebarLink>
                 )}
                 
-                {showAddClient && (
-                  <SidebarLink 
-                    href="/add-client" 
-                    icon={<UserPlus className="h-5 w-5 text-current" />}
-                    active={location === "/add-client"}
-                  >
-                    Add Client
-                  </SidebarLink>
-                )}
+                {/* Add Client link removed as this functionality exists in Channels tab */}
                 
                 {showAddUser && (
                   <SidebarLink 

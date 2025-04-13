@@ -13,7 +13,7 @@ import OrderData from "@/pages/OrderData";
 import Track from "@/pages/Track";
 import ManifestOrders from "@/pages/ManifestOrders";
 import Channels from "@/pages/Channels";
-import AddClient from "@/pages/AddClient";
+// AddClient import removed as it's no longer needed
 import AddUser from "@/pages/AddUser";
 import PublicTrack from "@/pages/PublicTrack";
 import ProfilePage from "@/pages/ProfilePage";
@@ -100,12 +100,7 @@ function Router() {
         />
       </Route>
       
-      <Route path="/add-client">
-        <ProtectedRoute 
-          component={AddClient} 
-          roles={[UserRole.BFAST_ADMIN]} 
-        />
-      </Route>
+      {/* Add Client route removed as this functionality exists in Channels tab */}
       
       <Route path="/add-user">
         <ProtectedRoute 

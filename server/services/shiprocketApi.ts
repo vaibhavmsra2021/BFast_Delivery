@@ -67,8 +67,7 @@ export class ShiprocketApiService {
   private tokenExpiry: Date | null = null;
   private email: string | null = null;
   private password: string | null = null;
-  // Maintain a counter for auto-generated AWBs
-  private static awbCounter = 1000000;
+  // Auto-assign AWB feature has been removed
 
   constructor(email?: string, password?: string) {
     if (email && password) {
@@ -585,8 +584,8 @@ export class ShiprocketApiService {
           created++;
         } else {
           // Update existing order with new data
-          // If we already have an AWB (including auto-assigned ones), don't overwrite it with empty string
-          const newAwb = order.awb_code || existingOrder.awb || autoAssignedAwb;
+          // If we already have an AWB, don't overwrite it with empty string
+          const newAwb = order.awb_code || existingOrder.awb || '';
           
           await storage.updateOrder(existingOrder.id, {
             awb: newAwb,

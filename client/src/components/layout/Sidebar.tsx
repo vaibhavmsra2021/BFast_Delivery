@@ -63,7 +63,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
   const showManifest = isBfastAdmin || isBfastExec || isClientAdmin;
 
   const showChannels = isBfastAdmin;
-  const showAddClient = isBfastAdmin;
+  // Add Client functionality exists in Channels tab
   const showAddUser = isBfastAdmin || isClientAdmin;
   
   return (
@@ -135,7 +135,7 @@ export function Sidebar({ isMobile = false }: SidebarProps) {
 
           
           {/* Admin section */}
-          {(showChannels || showAddClient || showAddUser) && (
+          {(showChannels || showAddUser) && (
             <div className="pt-4 border-t border-neutral-100">
               <h3 className="px-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                 Administration

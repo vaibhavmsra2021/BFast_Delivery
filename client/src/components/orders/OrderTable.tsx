@@ -104,18 +104,18 @@ export function OrderTable({
   const getStatusBadgeColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "delivered":
-        return "bg-status-delivered bg-opacity-10 text-status-delivered";
+        return "bg-[hsl(var(--status-delivered))] bg-opacity-10 text-[hsl(var(--status-delivered))]";
       case "in-process":
       case "in transit":
-        return "bg-status-inprocess bg-opacity-10 text-status-inprocess";
+        return "bg-[hsl(var(--status-inprocess))] bg-opacity-10 text-[hsl(var(--status-inprocess))]";
       case "ndr":
-        return "bg-status-ndr bg-opacity-10 text-status-ndr";
+        return "bg-[hsl(var(--status-ndr))] bg-opacity-10 text-[hsl(var(--status-ndr))]";
       case "rto":
-        return "bg-status-rto bg-opacity-10 text-status-rto";
+        return "bg-[hsl(var(--status-rto))] bg-opacity-10 text-[hsl(var(--status-rto))]";
       case "lost":
-        return "bg-status-lost bg-opacity-10 text-status-lost";
+        return "bg-[hsl(var(--status-lost))] bg-opacity-10 text-[hsl(var(--status-lost))]";
       case "pending":
-        return "bg-accent bg-opacity-10 text-accent";
+        return "bg-[hsl(var(--status-pending))] bg-opacity-10 text-[hsl(var(--status-pending))]";
       default:
         return "bg-gray-100 text-gray-800";
     }

@@ -151,9 +151,4 @@ export const getShiprocketCSVData = async (filters?: any) => {
   return response.json();
 };
 
-// Auto-assign AWB numbers to orders without AWB
-export const autoAssignAWB = async (clientId?: string) => {
-  const payload = clientId ? { client_id: clientId } : {};
-  const response = await apiRequest('POST', '/api/orders/auto-assign-awb', payload);
-  return response.json();
-};
+// Auto-assign AWB functionality has been removed

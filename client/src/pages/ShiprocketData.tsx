@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { CSVUpload } from "@/components/orders/CSVUpload";
-import { AutoAssignAWBButton } from "@/components/orders/AutoAssignAWBButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -234,10 +233,7 @@ export default function ShiprocketData() {
                   >
                     Clear Filters
                   </Button>
-                  <AutoAssignAWBButton 
-                    variant="secondary"
-                    className="flex-1"
-                  />
+                  {/* Auto assign AWB button removed */}
                 </div>
               </div>
 
@@ -326,8 +322,8 @@ export default function ShiprocketData() {
               />
               
               <div className="mt-6 flex justify-between items-center">
-                <p className="text-sm text-gray-600">After uploading, you can auto-assign AWB numbers to orders without them.</p>
-                <AutoAssignAWBButton size="sm" />
+                <p className="text-sm text-gray-600">Upload your Shiprocket CSV data here to keep records updated.</p>
+                {/* Auto assign AWB button removed */}
               </div>
 
               {uploadMutation.isPending && (

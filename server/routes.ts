@@ -480,41 +480,7 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     }
   );
   
-  // Auto-assign AWB to orders without AWB
-  apiRouter.post(
-    "/orders/auto-assign-awb",
-    authService.authenticate,
-    authService.authorize([UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE, UserRole.CLIENT_ADMIN]),
-    async (req: Request, res: Response) => {
-      try {
-        // If client_id is provided, filter by it
-        const clientId = req.body.client_id;
-        
-        // Get orders without AWB
-        const allOrders = await storage.getAllOrders(clientId);
-        const ordersWithoutAwb = allOrders.filter(order => !order.awb || order.awb.trim() === '');
-        
-        console.log(`Found ${ordersWithoutAwb.length} orders without AWB to auto-assign`);
-        
-        // Assign AWB to each order
-        const updatedOrders = [];
-        for (const order of ordersWithoutAwb) {
-          const newAwb = shiprocketApiService.generateUniqueAWB();
-          const updated = await storage.updateOrder(order.id, { awb: newAwb });
-          updatedOrders.push(updated);
-        }
-        
-        res.status(200).json({
-          message: `Successfully assigned AWB numbers to ${updatedOrders.length} orders`,
-          updatedCount: updatedOrders.length,
-          orders: updatedOrders
-        });
-      } catch (error) {
-        console.error("Error auto-assigning AWB numbers:", error);
-        res.status(500).json({ message: "An error occurred while auto-assigning AWB numbers" });
-      }
-    }
-  );
+  // Auto-assign AWB endpoint has been removed
   
   // Bulk order update
   apiRouter.post(

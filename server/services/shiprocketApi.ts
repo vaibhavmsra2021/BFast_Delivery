@@ -78,13 +78,13 @@ export class ShiprocketApiService {
   }
   
   /**
-   * Generate a unique AWB number for orders without one
-   * This is used when Shiprocket API fails or when we need to provide a placeholder
+   * Auto-generate AWB feature has been removed
+   * This method is kept as a stub to maintain compatibility with existing code
+   * but will not be used for new orders
    */
   generateUniqueAWB(): string {
-    // Prefix with "AUTO" to distinguish from real AWBs
-    ShiprocketApiService.awbCounter++;
-    return `AUTO${ShiprocketApiService.awbCounter}`;
+    console.warn('generateUniqueAWB is deprecated and should not be used');
+    return '';
   }
 
   /**
@@ -546,14 +546,13 @@ export class ShiprocketApiService {
         }
         
         // Create a standard order object from Shiprocket data
-        // Auto-generate AWB if none exists
-        const autoAssignedAwb = !order.awb_code ? this.generateUniqueAWB() : '';
+        // Note: Auto-generate AWB feature has been removed
         
         const orderData = {
           client_id: 'SHIPROCKET', // Default client ID for Shiprocket orders
           shopify_store_id: order.channel || 'Custom',
           order_id: orderId,
-          awb: order.awb_code || autoAssignedAwb,
+          awb: order.awb_code || '',
           fulfillment_status: this.mapShiprocketStatusToOurStatus(order.status),
           shipping_details: {
             name: order.shipping_customer_name || order.billing_customer_name || '',

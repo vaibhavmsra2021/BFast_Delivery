@@ -45,7 +45,7 @@ interface ShiprocketOrdersListProps {
   maxItems?: number;
 }
 
-export function ShiprocketOrdersList({ maxItems = 20 }: ShiprocketOrdersListProps) {
+export function ShiprocketOrdersList({ maxItems = 5 }: ShiprocketOrdersListProps) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(maxItems);
   const [isSyncing, setIsSyncing] = useState(false);

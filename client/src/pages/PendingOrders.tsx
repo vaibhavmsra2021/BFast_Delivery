@@ -107,35 +107,62 @@ export default function PendingOrders() {
     // Map UI data back to API format
     const apiData: any = {};
     
-    // Handle product details if they exist
-    if (data.product) {
-      apiData.product_details = {
-        dimensions: data.dimensions,
-        weight: data.weight,
-      };
-    }
-    
     // Single fields mapping
     if (data.status) {
       apiData.fulfillment_status = data.status;
     }
     
-    if (data.awb) {
+    if (data.awb !== undefined) {
       apiData.awb = data.awb;
     }
     
-    if (data.courier) {
+    if (data.courier !== undefined) {
       apiData.courier = data.courier;
     }
     
-    if (data.weight) {
-      // If weight is provided directly (not through product)
-      if (!apiData.product_details) {
-        apiData.product_details = [{
-          weight: data.weight
-        }];
+    // Handle product details - need to preserve the original structure and update only what changed
+    if (data.weight !== undefined) {
+      // Get the original order first
+      const originalOrder = pendingOrders.find(order => order.order_id === orderId);
+      
+      // Create a properly formatted product_details object
+      if (originalOrder) {
+        let productDetails = originalOrder.product_details || [];
+        
+        // If it's an array, update the first item or create a new one
+        if (Array.isArray(productDetails)) {
+          if (productDetails.length > 0) {
+            // Update existing product details
+            apiData.product_details = productDetails.map(item => ({
+              ...item,
+              weight: data.weight
+            }));
+          } else {
+            // Create new product details
+            apiData.product_details = [{
+              product_name: "Product",
+              quantity: 1,
+              weight: data.weight,
+              dimensions: [10, 10, 10] // Default dimensions
+            }];
+          }
+        } else {
+          // If it's not an array (shouldn't happen but just in case)
+          apiData.product_details = [{
+            product_name: "Product",
+            quantity: 1,
+            weight: data.weight,
+            dimensions: [10, 10, 10] // Default dimensions
+          }];
+        }
       } else {
-        apiData.product_details.weight = data.weight;
+        // If we can't find the original order, create a basic product details object
+        apiData.product_details = [{
+          product_name: "Product",
+          quantity: 1,
+          weight: data.weight,
+          dimensions: [10, 10, 10] // Default dimensions
+        }];
       }
     }
     

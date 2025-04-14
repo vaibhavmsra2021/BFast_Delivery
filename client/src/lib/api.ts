@@ -95,8 +95,15 @@ export const getAllOrders = async (filters?: OrderFilters) => {
 };
 
 export const updateOrder = async (orderId: string, orderData: any) => {
-  const response = await apiRequest('PATCH', `/api/orders/${orderId}`, orderData);
-  return response.json();
+  try {
+    console.log(`Updating order: ${orderId} with data:`, orderData);
+    const response = await apiRequest('PATCH', `/api/orders/${orderId}`, orderData);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating order:', error);
+    throw error;
+  }
 };
 
 export const assignAWB = async (assignments: Array<{ orderId: string, awb: string }>) => {

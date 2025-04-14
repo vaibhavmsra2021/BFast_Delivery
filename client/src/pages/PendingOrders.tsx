@@ -56,7 +56,8 @@ export default function PendingOrders() {
       
       return {
         id: order.id,
-        orderId: order.order_id,
+        orderId: order.order_id,  // Using raw order_id without prefix for API calls
+        displayOrderId: `#${order.order_id}`.substring(0, 9),  // Only for display
         customer: {
           name: order.shipping_details?.customer_name || 'Unknown Customer',
           phone: order.shipping_details?.customer_phone || '',
@@ -99,21 +100,38 @@ export default function PendingOrders() {
   };
 
   const handleUpdateOrder = (orderId: string, data: any) => {
+    console.log("Updating order in PendingOrders:", orderId, data);
+    
+    // Make sure we have the raw orderId without any formatting
+    const cleanOrderId = orderId.replace(/^#/, '');
+    
     // Map UI data back to API format
     const apiData: any = {};
     
     if (data.product) {
-      apiData.product_details = {
-        dimensions: data.dimensions,
-        weight: data.weight,
-      };
+      apiData.product_details = [
+        {
+          dimensions: data.dimensions,
+          weight: data.weight,
+        }
+      ];
     }
     
     if (data.status) {
       apiData.fulfillment_status = data.status;
     }
     
-    updateOrderMutation.mutate({ orderId, data: apiData });
+    // Add any other fields that might have been updated
+    if (data.courier) {
+      apiData.courier = data.courier;
+    }
+    
+    if (data.awb) {
+      apiData.awb = data.awb;
+    }
+    
+    console.log("API data being sent:", apiData);
+    updateOrderMutation.mutate({ orderId: cleanOrderId, data: apiData });
   };
   
   // Function to download pending orders in the Bfast AWB template format

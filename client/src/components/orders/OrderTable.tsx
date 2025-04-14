@@ -97,7 +97,10 @@ export function OrderTable({
 
   const handleUpdateOrder = (orderId: string, data: Partial<Order>) => {
     if (onUpdateOrder) {
-      onUpdateOrder(orderId, data);
+      console.log("OrderTable: Handling order update for:", orderId, data);
+      // Make sure orderId doesn't have a # prefix
+      const cleanOrderId = orderId.replace(/^#/, '');
+      onUpdateOrder(cleanOrderId, data);
     }
   };
 

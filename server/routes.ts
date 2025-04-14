@@ -427,12 +427,15 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     async (req: Request, res: Response) => {
       try {
         const { orderId } = req.params;
-        const orderData = req.body;
+        const orderData = req.body.data || req.body; // Support both formats
+        
+        console.log(`Updating order ${orderId} with data:`, JSON.stringify(orderData));
         
         // Get the order
         const order = await storage.getOrderByOrderId(orderId);
         
         if (!order) {
+          console.error(`Order not found with ID: ${orderId}`);
           return res.status(404).json({ message: "Order not found" });
         }
         
@@ -443,13 +446,23 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
           return res.status(403).json({ message: "You don't have permission to update this order" });
         }
         
+        // Process product_details array if needed
+        if (orderData.product_details && !Array.isArray(orderData.product_details)) {
+          orderData.product_details = [orderData.product_details];
+        }
+        
         // Update the order
+        console.log(`Found order with ID ${order.id}, updating with data`);
         const updatedOrder = await storage.updateOrder(order.id, orderData);
+        console.log(`Order updated successfully: ${order.id}`);
         
         res.json(updatedOrder);
       } catch (error) {
         console.error("Update order error:", error);
-        res.status(500).json({ message: "An error occurred while updating the order" });
+        res.status(500).json({ 
+          message: "An error occurred while updating the order",
+          error: error instanceof Error ? error.message : String(error)
+        });
       }
     }
   );

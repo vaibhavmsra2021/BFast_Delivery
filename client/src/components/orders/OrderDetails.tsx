@@ -76,7 +76,37 @@ export function OrderDetails({ order, onUpdate }: OrderDetailsProps) {
   };
 
   const handleSubmit = () => {
-    onUpdate(editableOrder);
+    // Format the data for API submission
+    const updatedData: Partial<Order> = {};
+    
+    // Only include fields that have changed
+    if (order.status !== editableOrder.status) {
+      updatedData.status = editableOrder.status;
+    }
+    
+    if (order.awb !== editableOrder.awb) {
+      updatedData.awb = editableOrder.awb;
+    }
+    
+    if (order.courier !== editableOrder.courier) {
+      updatedData.courier = editableOrder.courier;
+    }
+    
+    // Check if dimensions or weight were changed
+    const dimensionsChanged = !order.dimensions.every((dim, index) => dim === editableOrder.dimensions[index]);
+    const weightChanged = order.weight !== editableOrder.weight;
+    
+    if (dimensionsChanged || weightChanged) {
+      updatedData.product = {
+        name: order.product.name,
+        quantity: order.product.quantity
+      };
+      updatedData.dimensions = editableOrder.dimensions;
+      updatedData.weight = editableOrder.weight;
+    }
+    
+    console.log("Submitting updated order data:", updatedData);
+    onUpdate(updatedData);
     setEditMode(false);
   };
 

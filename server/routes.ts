@@ -898,5 +898,165 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
   // Start cron service
   cronService.start();
   
+  // Shiprocket manifest generation routes
+  apiRouter.post(
+    "/shiprocket/manifests/generate",
+    authService.authenticate,
+    async (req: Request, res: Response) => {
+      try {
+        const { orderIds, courierName } = req.body;
+        
+        if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+          return res.status(400).json({
+            message: "Please provide a valid array of order IDs"
+          });
+        }
+        
+        if (!courierName) {
+          return res.status(400).json({
+            message: "Please provide a courier name"
+          });
+        }
+        
+        // Get the client ID from the user
+        const user = (req as any).user;
+        const clientId = user.clientId;
+        
+        // Create an instance with the right credentials
+        let shiprocketApi = shiprocketApiService;
+        
+        if (clientId) {
+          const client = await storage.getClientByClientId(clientId);
+          if (client?.shiprocket_email && client?.shiprocket_password) {
+            // Use client-specific credentials
+            shiprocketApi = new ShiprocketApiService(
+              client.shiprocket_email,
+              client.shiprocket_password
+            );
+          }
+        }
+        
+        const manifest = await shiprocketApi.generateManifest(orderIds, courierName);
+        return res.json(manifest);
+      } catch (error) {
+        console.error("Generate Shiprocket manifest error:", error);
+        res.status(500).json({ 
+          message: "Failed to generate manifest with Shiprocket",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    }
+  );
+  
+  // Print Shiprocket manifest
+  apiRouter.get(
+    "/shiprocket/manifests/print/:manifestId",
+    async (req: Request, res: Response) => {
+      try {
+        const manifestId = req.params.manifestId;
+        
+        if (!manifestId) {
+          return res.status(400).json({
+            message: "Please provide a valid manifest ID"
+          });
+        }
+        
+        // Allow token to be provided as a query parameter for use in window.open() calls
+        const token = req.query.token as string;
+        let user: any = null;
+        let clientId: string | null = null;
+        
+        if (token) {
+          try {
+            // Verify the token to get the user
+            const decoded = await authService.verifyToken(token);
+            user = decoded;
+            clientId = user.clientId;
+          } catch (tokenError) {
+            return res.status(401).json({
+              message: "Authentication required"
+            });
+          }
+        } else if (req.isAuthenticated && req.isAuthenticated()) {
+          // If no token but session auth is available
+          user = (req as any).user;
+          clientId = user.clientId;
+        } else {
+          return res.status(401).json({
+            message: "Authentication required"
+          });
+        }
+        
+        // Create an instance with the right credentials
+        let shiprocketApi = shiprocketApiService;
+        
+        if (clientId) {
+          const client = await storage.getClientByClientId(clientId);
+          if (client?.shiprocket_email && client?.shiprocket_password) {
+            // Use client-specific credentials
+            shiprocketApi = new ShiprocketApiService(
+              client.shiprocket_email,
+              client.shiprocket_password
+            );
+          }
+        }
+        
+        const manifestData = await shiprocketApi.printManifest(manifestId);
+        
+        // Set appropriate headers for the response
+        res.setHeader('Content-Type', manifestData.contentType || 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="manifest-${manifestId}.pdf"`);
+        
+        // Send the raw PDF data
+        return res.send(manifestData.data);
+      } catch (error) {
+        console.error("Print Shiprocket manifest error:", error);
+        res.status(500).json({ 
+          message: "Failed to print manifest from Shiprocket",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    }
+  );
+  
+  // Get all Shiprocket manifests
+  apiRouter.get(
+    "/shiprocket/manifests",
+    authService.authenticate,
+    async (req: Request, res: Response) => {
+      try {
+        const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+        const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 20;
+        
+        // Get the client ID from the user
+        const user = (req as any).user;
+        const clientId = user.clientId;
+        
+        // Create an instance with the right credentials
+        let shiprocketApi = shiprocketApiService;
+        
+        if (clientId) {
+          const client = await storage.getClientByClientId(clientId);
+          if (client?.shiprocket_email && client?.shiprocket_password) {
+            // Use client-specific credentials
+            shiprocketApi = new ShiprocketApiService(
+              client.shiprocket_email,
+              client.shiprocket_password
+            );
+          }
+        }
+        
+        const manifests = await shiprocketApi.getManifests(page, pageSize);
+        return res.json(manifests);
+      } catch (error) {
+        console.error("Get Shiprocket manifests error:", error);
+        res.status(500).json({ 
+          message: "Failed to fetch manifests from Shiprocket",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    }
+  );
+
   return httpServer;
 }

@@ -8,11 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
-import { Download, FileCheck, AlertCircle, ArrowRight } from "lucide-react";
+import { Download, FileCheck, AlertCircle, ArrowRight, Printer } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Order {
   id: string;
@@ -288,6 +289,9 @@ export default function ManifestOrders() {
     }
   };
 
+  // State to track the generated manifest ID
+  const [manifestId, setManifestId] = useState<string | null>(null);
+  
   const handleGenerateManifest = async () => {
     setGeneratingManifest(true);
     
@@ -304,18 +308,101 @@ export default function ManifestOrders() {
       return;
     }
     
-    // Simulate API request delay
-    setTimeout(() => {
+    try {
+      // Map orders to the format expected by the API
+      const orderIds = ordersForManifest.map(order => order.orderId);
+      
+      // Convert the selected courier to Shiprocket's expected format
+      let courierName = "";
+      switch (selectedCourier) {
+        case "shiprocket":
+          courierName = "Shiprocket"; // Or the exact name expected by Shiprocket API
+          break;
+        case "ecom":
+          courierName = "Ecom Express";
+          break;
+        case "delhivery":
+          courierName = "Delhivery";
+          break;
+        case "bluedart":
+          courierName = "Bluedart";
+          break;
+        default:
+          courierName = "Shiprocket";
+      }
+      
+      // Call the API to generate the manifest using apiRequest for authentication
+      const response = await apiRequest(
+        'POST',
+        '/api/shiprocket/manifests/generate',
+        { orderIds, courierName }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate manifest');
+      }
+      
+      const manifestData = await response.json();
+      
+      // Store the manifest ID for later use
+      if (manifestData.manifest_id) {
+        setManifestId(manifestData.manifest_id);
+      } else if (manifestData.id) {
+        setManifestId(manifestData.id);
+      } else {
+        throw new Error('No manifest ID returned from API');
+      }
+      
       toast({
         title: "Manifest generated successfully",
         description: `Manifest for ${ordersForManifest.length} orders has been generated.`,
       });
       
-      // In a real implementation, this would trigger a download of the manifest
-      // or redirect to a page with the manifest details
-      
+    } catch (error) {
+      console.error('Error generating manifest:', error);
+      toast({
+        title: "Error generating manifest",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
       setGeneratingManifest(false);
-    }, 1500);
+    }
+  };
+  
+  // Function to handle printing the manifest
+  const handlePrintManifest = async () => {
+    if (!manifestId) {
+      toast({
+        title: "No manifest available",
+        description: "Please generate a manifest first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // We'll use a separate window to open the PDF as apiRequest doesn't handle file downloads directly
+      // First get the auth token to include in the URL
+      const token = localStorage.getItem('auth-storage') 
+        ? JSON.parse(localStorage.getItem('auth-storage') || '{}')?.state?.token 
+        : null;
+        
+      if (!token) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      // Direct the browser to download the PDF with authentication
+      window.open(`/api/shiprocket/manifests/print/${manifestId}?token=${token}`, '_blank');
+    } catch (error) {
+      console.error('Error printing manifest:', error);
+      toast({
+        title: "Error printing manifest",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -365,7 +452,7 @@ export default function ManifestOrders() {
                 </Select>
               </div>
               
-              <div className="pt-4">
+              <div className="pt-4 space-y-2">
                 <Button 
                   className="w-full" 
                   disabled={generatingManifest || selectedOrders.filter(o => o.selected).length === 0}
@@ -380,6 +467,17 @@ export default function ManifestOrders() {
                     </>
                   )}
                 </Button>
+                
+                {manifestId && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handlePrintManifest}
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print Manifest
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -6,7 +6,7 @@ import { LucideUpload, AlertCircle, FileCheck } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface CSVUploadProps {
-  title: string;
+  title?: string;
   description: string;
   onUpload: (file: File) => void;
   templateUrl?: string;

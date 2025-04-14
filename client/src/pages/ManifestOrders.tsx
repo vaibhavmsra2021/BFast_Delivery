@@ -118,22 +118,40 @@ export default function ManifestOrders() {
     setUploadedFile(file);
     setUploadSuccess(true);
     setUploadError(null);
+    setGeneratingManifest(true);
     
-    // In a real implementation, this would parse the CSV file 
-    // and extract orders that can be used for manifest generation
-    
-    // Simulate adding some selected orders
-    const firstFiveOrders = transformedOrders.slice(0, 5).map(order => ({
-      ...order,
-      selected: true
-    }));
-    
-    setSelectedOrders(firstFiveOrders);
-    
-    toast({
-      title: "CSV file uploaded successfully",
-      description: `${file.name} (${(file.size / 1024).toFixed(2)} KB) has been processed.`,
-    });
+    try {
+      // In a real implementation, this would send the file to the server
+      // for parsing and return the orders to be manifested
+      
+      // For demonstration, we'll simulate loading all available orders
+      // from the database, which would normally be filtered by the CSV content
+      
+      // Reset any previously selected orders
+      setSelectedOrders([]);
+      
+      // Set all available orders as selectable (but not selected by default)
+      const availableOrders = transformedOrders.map(order => ({
+        ...order,
+        selected: false // Initially not selected
+      }));
+      
+      setSelectedOrders(availableOrders);
+      
+      toast({
+        title: "CSV file uploaded successfully",
+        description: `${file.name} (${(file.size / 1024).toFixed(2)} KB) has been processed. Please select orders to include in the manifest.`,
+      });
+    } catch (error) {
+      setUploadError("Failed to process the CSV file. Please try again.");
+      toast({
+        title: "Error processing CSV",
+        description: "There was an error processing the uploaded file.",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingManifest(false);
+    }
   };
 
   const handleToggleOrderSelection = (orderId: string) => {
@@ -222,11 +240,12 @@ export default function ManifestOrders() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="manifest-date">Manifest Date</Label>
-                <DatePicker 
-                  date={manifestDate} 
-                  setDate={setManifestDate} 
-                  id="manifest-date"
-                />
+                <div>
+                  <DatePicker 
+                    date={manifestDate} 
+                    setDate={setManifestDate}
+                  />
+                </div>
               </div>
               
               <div className="space-y-2">
@@ -273,6 +292,7 @@ export default function ManifestOrders() {
             </CardHeader>
             <CardContent>
               <CSVUpload
+                title="Upload CSV"
                 description="Upload a CSV file containing order information for manifest generation."
                 onUpload={handleCsvUpload}
               />

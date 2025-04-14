@@ -47,6 +47,7 @@ interface Order {
     remark: string;
   };
   selected?: boolean;
+  fromCsv?: boolean; // Flag to indicate if order was parsed from CSV
 }
 
 export default function ManifestOrders() {
@@ -121,34 +122,116 @@ export default function ManifestOrders() {
     setGeneratingManifest(true);
     
     try {
-      // In a real implementation, this would send the file to the server
-      // for parsing and return the orders to be manifested
+      // Parse the CSV file directly in the browser
+      const csvText = await file.text();
+      const csvRows = csvText.split('\n');
       
-      // For demonstration, we'll simulate loading all available orders
-      // from the database, which would normally be filtered by the CSV content
+      // Extract headers (first row)
+      const headers = csvRows[0].split(',').map(header => header.trim());
+      
+      // Extract order data from the remaining rows
+      const parsedOrders: Order[] = [];
+      
+      // Find index of relevant columns
+      const orderIdIndex = headers.findIndex(h => h.toLowerCase().includes('order') || h.toLowerCase().includes('id'));
+      const customerNameIndex = headers.findIndex(h => h.toLowerCase().includes('customer') || h.toLowerCase().includes('name'));
+      const awbIndex = headers.findIndex(h => h.toLowerCase().includes('awb') || h.toLowerCase().includes('tracking'));
+      const courierIndex = headers.findIndex(h => h.toLowerCase().includes('courier') || h.toLowerCase().includes('partner'));
+      const amountIndex = headers.findIndex(h => h.toLowerCase().includes('amount') || h.toLowerCase().includes('value'));
+      
+      // Process rows (skip header)
+      for (let i = 1; i < csvRows.length; i++) {
+        if (!csvRows[i].trim()) continue; // Skip empty rows
+        
+        const rowData = csvRows[i].split(',').map(cell => cell.trim());
+        
+        if (rowData.length < 3) continue; // Skip malformed rows
+        
+        // Create a new order object from CSV data
+        // Use default values when specific columns are not found
+        const csvOrder: Order = {
+          id: `csv-${i}`, // Generate an ID for the CSV row
+          orderId: orderIdIndex >= 0 ? rowData[orderIdIndex] : `CSV-${i}`,
+          displayOrderId: orderIdIndex >= 0 ? `#${rowData[orderIdIndex].substring(0, 8)}` : `CSV-${i}`,
+          customer: {
+            name: customerNameIndex >= 0 ? rowData[customerNameIndex] : "Customer from CSV",
+            phone: "N/A",
+            email: "N/A"
+          },
+          date: format(new Date(), "MMM dd, yyyy"),
+          status: "Pending",
+          awb: awbIndex >= 0 ? rowData[awbIndex] : "",
+          courier: courierIndex >= 0 ? rowData[courierIndex] : "",
+          amount: amountIndex >= 0 ? `₹${rowData[amountIndex]}` : "N/A",
+          paymentMode: "N/A",
+          product: {
+            name: "Product from CSV",
+            quantity: 1
+          },
+          shippingAddress: {
+            address: "N/A",
+            city: "N/A",
+            state: "N/A",
+            pincode: "N/A"
+          },
+          dimensions: [],
+          weight: 0,
+          lastUpdate: {
+            timestamp: "",
+            location: "",
+            remark: ""
+          },
+          selected: false,
+          fromCsv: true // Mark as being from CSV
+        };
+        
+        parsedOrders.push(csvOrder);
+      }
       
       // Reset any previously selected orders
       setSelectedOrders([]);
       
-      // Set all available orders as selectable (but not selected by default)
-      const availableOrders = transformedOrders.map(order => ({
-        ...order,
-        selected: false // Initially not selected
-      }));
-      
-      setSelectedOrders(availableOrders);
-      
-      toast({
-        title: "CSV file uploaded successfully",
-        description: `${file.name} (${(file.size / 1024).toFixed(2)} KB) has been processed. Please select orders to include in the manifest.`,
-      });
+      // Load the parsed orders from the CSV
+      if (parsedOrders.length > 0) {
+        setSelectedOrders(parsedOrders);
+        
+        toast({
+          title: "CSV file uploaded successfully",
+          description: `${file.name} (${(file.size / 1024).toFixed(2)} KB) has been processed. ${parsedOrders.length} orders loaded.`,
+        });
+      } else {
+        // Fallback to showing all available orders if CSV parsing failed
+        const availableOrders = transformedOrders.map(order => ({
+          ...order,
+          selected: false,
+          fromCsv: false
+        }));
+        
+        setSelectedOrders(availableOrders);
+        
+        toast({
+          title: "CSV processing incomplete",
+          description: "Could not find specific order data in the CSV. Showing all available orders instead.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
-      setUploadError("Failed to process the CSV file. Please try again.");
+      console.error("CSV processing error:", error);
+      setUploadError("Failed to process the CSV file. Please check the format and try again.");
       toast({
         title: "Error processing CSV",
         description: "There was an error processing the uploaded file.",
         variant: "destructive"
       });
+      
+      // Fallback to showing all available orders
+      const availableOrders = transformedOrders.map(order => ({
+        ...order,
+        selected: false,
+        fromCsv: false
+      }));
+      
+      setSelectedOrders(availableOrders);
     } finally {
       setGeneratingManifest(false);
     }
@@ -179,13 +262,29 @@ export default function ManifestOrders() {
 
   const handleSelectAllOrders = (selected: boolean) => {
     if (selected) {
-      const allSelectedOrders = transformedOrders.map(order => ({
-        ...order,
-        selected: true
-      }));
-      setSelectedOrders(allSelectedOrders);
+      // If we already have orders (from CSV or database), mark them all as selected
+      if (selectedOrders.length > 0) {
+        const updatedOrders = selectedOrders.map(order => ({
+          ...order,
+          selected: true
+        }));
+        setSelectedOrders(updatedOrders);
+      } else {
+        // If no orders loaded yet, use the database orders
+        const allSelectedOrders = transformedOrders.map(order => ({
+          ...order,
+          selected: true,
+          fromCsv: false
+        }));
+        setSelectedOrders(allSelectedOrders);
+      }
     } else {
-      setSelectedOrders([]);
+      // Unselect all orders but keep them in the list
+      const updatedOrders = selectedOrders.map(order => ({
+        ...order,
+        selected: false
+      }));
+      setSelectedOrders(updatedOrders);
     }
   };
 
@@ -323,7 +422,7 @@ export default function ManifestOrders() {
               <div className="flex items-center">
                 <Checkbox 
                   id="select-all" 
-                  checked={transformedOrders.length > 0 && selectedOrders.length === transformedOrders.length && selectedOrders.every(o => o.selected)}
+                  checked={selectedOrders.length > 0 && selectedOrders.every(o => o.selected)}
                   onCheckedChange={handleSelectAllOrders}
                 />
                 <label htmlFor="select-all" className="ml-2 text-sm font-medium">
@@ -386,7 +485,44 @@ export default function ManifestOrders() {
                       </td>
                     </tr>
                   ))
+                ) : selectedOrders.length > 0 ? (
+                  // Show the uploaded CSV orders if available
+                  selectedOrders.map((order) => {
+                    return (
+                      <tr 
+                        key={order.id} 
+                        className={`hover:bg-neutral-50 ${order.selected ? 'bg-primary/5' : ''} ${order.fromCsv ? 'bg-blue-50/30' : ''}`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Checkbox 
+                            checked={order.selected}
+                            onCheckedChange={() => handleToggleOrderSelection(order.orderId)}
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap font-medium">
+                          {order.displayOrderId || order.orderId}
+                          {order.fromCsv && <span className="ml-2 text-xs text-blue-600 bg-blue-100 px-1 py-0.5 rounded">CSV</span>}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {order.customer.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {order.date}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap font-mono">
+                          {order.awb || "-"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {order.courier || "-"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {order.amount}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : transformedOrders.length > 0 ? (
+                  // Fallback to showing database orders when no CSV is uploaded
                   transformedOrders.map((order) => {
                     const isSelected = selectedOrders.some(o => o.orderId === order.orderId && o.selected);
                     
@@ -425,7 +561,7 @@ export default function ManifestOrders() {
                 ) : (
                   <tr>
                     <td colSpan={7} className="px-6 py-8 text-center text-neutral-500">
-                      No orders found for manifest
+                      No orders found for manifest. Upload a CSV file to get started.
                     </td>
                   </tr>
                 )}

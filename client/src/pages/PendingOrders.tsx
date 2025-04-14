@@ -1,74 +1,28 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPendingOrders, updateOrder, bulkUpdateOrders } from "@/lib/api";
-import { OrderTable } from "@/components/orders/OrderTable";
-import { CSVUpload } from "@/components/orders/CSVUpload";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { queryClient } from "@/lib/queryClient";
+import { updateOrder } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-
-const awbAssignmentSchema = z.object({
-  orderId: z.string().min(1, "Order ID is required"),
-  awb: z.string().min(1, "AWB number is required"),
-  courier: z.string().min(1, "Courier name is required"),
-});
-
-type AWBAssignmentFormValues = z.infer<typeof awbAssignmentSchema>;
+import { OrderTable } from "@/components/orders/OrderTable";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export default function PendingOrders() {
-  const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [isAwbDialogOpen, setIsAwbDialogOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState("");
-  const [csvError, setCsvError] = useState<string | null>(null);
-
-  // Form for AWB assignment
-  const form = useForm<AWBAssignmentFormValues>({
-    resolver: zodResolver(awbAssignmentSchema),
-    defaultValues: {
-      orderId: "",
-      awb: "",
-      courier: "",
-    },
-  });
-
-  // Fetch pending orders
-  const { data: pendingOrders, isLoading } = useQuery<any[]>({
-    queryKey: ['/api/orders/pending'],
-    placeholderData: []
-  });
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   
-  // Add this to ensure the orders are properly loaded
-  const pendingOrdersData = pendingOrders || [];
+  // Fetch pending orders
+  const { data: pendingOrders = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/orders/pending'],
+  });
 
   // Mutation for updating order
   const updateOrderMutation = useMutation({
-    mutationFn: ({ orderId, data }: { orderId: string, data: any }) =>
-      updateOrder(orderId, data),
+    mutationFn: ({ orderId, data }: { orderId: string, data: any }) => {
+      console.log("Updating order:", orderId, data);
+      return updateOrder(orderId, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/orders/pending'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
@@ -77,8 +31,7 @@ export default function PendingOrders() {
         title: "Order Updated",
         description: "The order has been updated successfully.",
       });
-      setIsAwbDialogOpen(false);
-      form.reset();
+      setSelectedOrder(null);
     },
     onError: (error) => {
       toast({
@@ -86,29 +39,6 @@ export default function PendingOrders() {
         description: error instanceof Error ? error.message : "Failed to update order",
         variant: "destructive",
       });
-    },
-  });
-
-  // Mutation for bulk updates
-  const bulkUpdateMutation = useMutation({
-    mutationFn: (updates: any[]) => bulkUpdateOrders(updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/orders/pending'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/orders/summary'] });
-      toast({
-        title: "Orders Updated",
-        description: "The orders have been updated successfully.",
-      });
-      setCsvError(null);
-    },
-    onError: (error) => {
-      toast({
-        title: "Update Failed",
-        description: error instanceof Error ? error.message : "Failed to update orders",
-        variant: "destructive",
-      });
-      setCsvError(error instanceof Error ? error.message : "Failed to update orders");
     },
   });
 
@@ -126,7 +56,7 @@ export default function PendingOrders() {
       
       return {
         id: order.id,
-        orderId: `#${order.order_id.substring(0, 8)}`,
+        orderId: order.order_id,
         customer: {
           name: order.shipping_details?.customer_name || 'Unknown Customer',
           phone: order.shipping_details?.customer_phone || '',
@@ -163,14 +93,9 @@ export default function PendingOrders() {
           location: order.last_scan_location || '',
           remark: order.last_remark || '',
         },
+        raw: order, // Keep the raw order data for the CSV export
       };
     });
-  };
-
-  const handleAssignAWB = (orderId: string) => {
-    setSelectedOrderId(orderId);
-    form.setValue("orderId", orderId);
-    setIsAwbDialogOpen(true);
   };
 
   const handleUpdateOrder = (orderId: string, data: any) => {
@@ -190,70 +115,146 @@ export default function PendingOrders() {
     
     updateOrderMutation.mutate({ orderId, data: apiData });
   };
-
-  const onSubmitAwb = (data: AWBAssignmentFormValues) => {
-    updateOrderMutation.mutate({
-      orderId: data.orderId,
-      data: {
-        awb: data.awb,
-        courier: data.courier,
-        fulfillment_status: "In-Process"
-      }
+  
+  // Function to download pending orders in the Bfast AWB template format
+  const handleDownloadCSV = () => {
+    const today = new Date();
+    const formattedDate = format(today, 'dd/MM/yyyy');
+    
+    // CSV Header (from template)
+    const header = "AWB Number,Courier Type,Client Order ID,Order Confirmation,Bfast Status,Delivery Status,Sale Channel,Aggregator Partner,Client ID,Month,Pick Up Date (dd/mm/yyyy),*Sale Order Number,Order Date,Delivery Center Name,*Transport Mode,*Payment Mode,COD Amount,*Customer First Name,*Customer Last Name,Customer Email,*Customer Phone,*Shipping Address Line1,Customer Alternate Phone,Shipping Address Line2,*Shipping City,*Shipping State,*Shipping Pincode,Item Category,*Item Sku Code,*Item Sku Name,*Quantity Ordered,Packaging Type,*Unit Item Price,Length (cm),Breadth (cm),Height (cm),Weight (gm),ConsigneeName,ConsigneeAddress,ShipmentWeight (Kg),Product Name Aggregator,*Payment Method (COD/Prepaid),Volumetric Weight,Charged Weight,Fragile,Item Description,Zone,Lost / Damaged Credit Value,Settlement Status,Delivery TAT,Tracking Link,Tracking Message,Delivery Date,Delivery Confirmation,Customer Remarks,NDR Remarks,RTO Remarks,COD Charge,Forward Charge,RTO Charge,Total Bill,Total Bill with GST,Remittance Number,Remittance Date,Remittance Status,Billing Number,Biiling Date,Bill Status";
+    
+    // Generate rows for each pending order
+    const rows = pendingOrders.map((order) => {
+      // Split customer name into first and last name
+      const nameParts = (order.shipping_details?.customer_name || 'Unknown').split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      // Extract product details
+      const product = Array.isArray(order.product_details) && order.product_details.length > 0
+        ? order.product_details[0]
+        : {};
+      
+      // Extract dimensions and weight
+      const dimensions = product.dimensions || [];
+      const length = Array.isArray(dimensions) && dimensions.length > 0 ? dimensions[0] : '';
+      const breadth = Array.isArray(dimensions) && dimensions.length > 1 ? dimensions[1] : '';
+      const height = Array.isArray(dimensions) && dimensions.length > 2 ? dimensions[2] : '';
+      const weight = product.weight || '';
+      
+      // Extract payment mode
+      const paymentMode = order.shipping_details?.payment_mode || 'Prepaid';
+      const codAmount = paymentMode.toLowerCase().includes('cod') ? 
+        (order.shipping_details?.amount || '0') : '0';
+      
+      // Format order date
+      const orderDate = order.created_at ? format(new Date(order.created_at), 'dd/MM/yyyy') : '';
+      const month = order.created_at ? format(new Date(order.created_at), 'MMMM') : '';
+      
+      // Map all values to the BFast AWB Format template
+      return [
+        order.awb || '', // AWB Number
+        order.courier || '', // Courier Type
+        order.order_id || '', // Client Order ID
+        'Confirmed', // Order Confirmation
+        order.fulfillment_status || 'Pending', // Bfast Status
+        order.delivery_status || '', // Delivery Status
+        'Website', // Sale Channel
+        '', // Aggregator Partner
+        order.client_id || '', // Client ID
+        month, // Month
+        formattedDate, // Pick Up Date
+        order.order_id || '', // Sale Order Number
+        orderDate, // Order Date
+        '', // Delivery Center Name
+        order.shipping_details?.shipping_method || 'Surface', // Transport Mode
+        paymentMode, // Payment Mode
+        codAmount, // COD Amount
+        firstName, // Customer First Name
+        lastName, // Customer Last Name
+        order.shipping_details?.customer_email || '', // Customer Email
+        order.shipping_details?.customer_phone || '', // Customer Phone
+        order.shipping_details?.address || '', // Shipping Address Line1
+        '', // Customer Alternate Phone
+        '', // Shipping Address Line2
+        order.shipping_details?.city || '', // Shipping City
+        order.shipping_details?.state || '', // Shipping State
+        order.shipping_details?.pin_code || '', // Shipping Pincode
+        '', // Item Category
+        product.sku || '', // Item Sku Code
+        product.name || '', // Item Sku Name
+        product.quantity || '1', // Quantity Ordered
+        '', // Packaging Type
+        product.price || '', // Unit Item Price
+        length, // Length (cm)
+        breadth, // Breadth (cm)
+        height, // Height (cm)
+        weight, // Weight (gm)
+        order.shipping_details?.customer_name || '', // ConsigneeName
+        order.shipping_details?.address || '', // ConsigneeAddress
+        weight ? (parseFloat(weight) / 1000).toFixed(2) : '', // ShipmentWeight (Kg)
+        product.name || '', // Product Name Aggregator
+        paymentMode.toLowerCase().includes('cod') ? 'COD' : 'Prepaid', // Payment Method
+        '', // Volumetric Weight
+        '', // Charged Weight
+        'No', // Fragile
+        product.description || '', // Item Description
+        '', // Zone
+        '', // Lost / Damaged Credit Value
+        '', // Settlement Status
+        '', // Delivery TAT
+        '', // Tracking Link
+        '', // Tracking Message
+        '', // Delivery Date
+        '', // Delivery Confirmation
+        '', // Customer Remarks
+        '', // NDR Remarks
+        '', // RTO Remarks
+        '', // COD Charge
+        '', // Forward Charge
+        '', // RTO Charge
+        '', // Total Bill
+        '', // Total Bill with GST
+        '', // Remittance Number
+        '', // Remittance Date
+        '', // Remittance Status
+        '', // Billing Number
+        '', // Biiling Date
+        ''  // Bill Status
+      ].map(value => {
+        // Escape commas and quotes in values
+        const stringValue = String(value);
+        if (stringValue.includes(',') || stringValue.includes('"')) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      }).join(',');
+    });
+    
+    // Combine header and rows to create the full CSV content
+    const csvContent = [header, ...rows].join('\n');
+    
+    // Create a Blob with the CSV data
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // Create a link element and trigger download
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `pending_orders_${format(today, 'yyyyMMdd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "CSV Downloaded",
+      description: "Pending orders exported to CSV successfully.",
     });
   };
 
-  const handleCsvUpload = async (file: File) => {
-    try {
-      const text = await file.text();
-      const rows = text.split('\n');
-      
-      // Skip header row and filter out empty rows
-      const dataRows = rows.slice(1).filter(row => row.trim().length > 0);
-      
-      const updates = dataRows.map(row => {
-        const columns = row.split(',');
-        
-        // Expecting: OrderId,AWB,Courier,Weight,Length,Width,Height
-        if (columns.length < 3) {
-          throw new Error(`Invalid row format: ${row}`);
-        }
-        
-        const [orderId, awb, courier, weight, length, width, height] = columns.map(c => c.trim());
-        
-        const data: any = {
-          awb,
-          courier,
-          fulfillment_status: "In-Process"
-        };
-        
-        // Add dimensions and weight if provided
-        if (weight || (length && width && height)) {
-          data.product_details = {};
-          
-          if (weight) {
-            data.product_details.weight = parseFloat(weight);
-          }
-          
-          if (length && width && height) {
-            data.product_details.dimensions = [
-              parseFloat(length),
-              parseFloat(width),
-              parseFloat(height)
-            ];
-          }
-        }
-        
-        return { orderId, data };
-      });
-      
-      await bulkUpdateMutation.mutateAsync(updates);
-    } catch (error) {
-      console.error("CSV processing error:", error);
-      throw error;
-    }
-  };
-
-  const transformedOrders = transformOrders(pendingOrdersData);
+  const transformedOrders = transformOrders(pendingOrders);
 
   return (
     <div className="py-6">
@@ -265,128 +266,40 @@ export default function PendingOrders() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mt-6">
-        <Tabs defaultValue="orders">
-          <TabsList className="mb-6">
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="orders">
-            <div className="flex justify-between mb-4">
-              <div className="flex">
-                {/* Auto assign AWB button removed */}
-              </div>
-              <div className="flex">
-                <Button variant="outline" className="mr-2">
-                  Download CSV
-                </Button>
-              </div>
-            </div>
-            
-            <OrderTable
-              orders={transformedOrders}
-              isLoading={isLoading}
-              title="Pending Orders"
-              totalCount={transformedOrders.length}
-              showActionButtons={true}
-              onAssignAWB={handleAssignAWB}
-              onUpdateOrder={handleUpdateOrder}
-            />
-          </TabsContent>
-          
-          <TabsContent value="bulk-upload">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <CSVUpload
-                title="Bulk AWB Assignment"
-                description="Upload a CSV file with Order IDs and AWB numbers to assign them in bulk."
-                onUpload={handleCsvUpload}
-                templateUrl="/templates/awb-assignment-template.csv"
-              />
-              
-              <CSVUpload
-                title="Update Shipment Details"
-                description="Update dimensions, weight, and transport mode for multiple orders at once."
-                onUpload={handleCsvUpload}
-                templateUrl="/templates/shipment-details-template.csv"
-              />
-            </div>
-            
-            {csvError && (
-              <Alert variant="destructive" className="mt-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{csvError}</AlertDescription>
-              </Alert>
-            )}
-          </TabsContent>
-        </Tabs>
+        <div className="flex justify-end mb-4">
+          <Button 
+            variant="outline"
+            onClick={handleDownloadCSV}
+          >
+            Download CSV
+          </Button>
+        </div>
+        
+        <OrderTable
+          orders={transformedOrders}
+          isLoading={isLoading}
+          title="Pending Orders"
+          totalCount={transformedOrders.length}
+          showActionButtons={false}
+          onUpdateOrder={handleUpdateOrder}
+        />
       </div>
 
-      {/* AWB Assignment Dialog */}
-      <Dialog open={isAwbDialogOpen} onOpenChange={setIsAwbDialogOpen}>
-        <DialogContent>
+      {/* Order Details Dialog */}
+      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Assign AWB Number</DialogTitle>
+            <DialogTitle>Order Details</DialogTitle>
             <DialogDescription>
-              Enter the AWB number and courier details for this order.
+              View and edit order details
             </DialogDescription>
           </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmitAwb)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="orderId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Order ID</FormLabel>
-                    <FormControl>
-                      <Input {...field} readOnly />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="awb"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>AWB Number</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Enter AWB number" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="courier"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Courier</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Enter courier name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAwbDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Assign AWB</Button>
-              </DialogFooter>
-            </form>
-          </Form>
+          {selectedOrder && (
+            <div>
+              {/* Order details content would go here */}
+              <p>Order ID: {selectedOrder.orderId}</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

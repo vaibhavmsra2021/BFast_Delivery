@@ -637,6 +637,85 @@ export class ShiprocketApiService {
     const upperStatus = shiprocketStatus.toUpperCase();
     return statusMap[upperStatus] || OrderStatus.PENDING;
   }
+
+  /**
+   * Generate a Shiprocket manifest for orders
+   * @param orderIds - Array of Shiprocket order IDs
+   * @param courierName - Name of the courier service
+   */
+  async generateManifest(orderIds: string[], courierName: string): Promise<any> {
+    try {
+      const headers = await this.getHeaders();
+      
+      const payload = {
+        shipment_id: orderIds,
+        courier_name: courierName
+      };
+      
+      const response = await axios.post(
+        `${this.baseUrl}/manifests/generate`,
+        payload,
+        { headers }
+      );
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error generating manifest from Shiprocket:', error);
+      throw new Error('Failed to generate manifest from Shiprocket');
+    }
+  }
+
+  /**
+   * Print a manifest from Shiprocket
+   * @param manifestId - ID of the generated manifest
+   */
+  async printManifest(manifestId: string): Promise<any> {
+    try {
+      const headers = await this.getHeaders();
+      
+      // For some APIs, Shiprocket might return a download URL instead of direct content
+      const response = await axios.get(
+        `${this.baseUrl}/manifests/print/${manifestId}`,
+        { 
+          headers,
+          responseType: 'arraybuffer' // For PDF response
+        }
+      );
+      
+      return {
+        data: response.data,
+        contentType: response.headers['content-type']
+      };
+    } catch (error) {
+      console.error('Error printing manifest from Shiprocket:', error);
+      throw new Error('Failed to print manifest from Shiprocket');
+    }
+  }
+
+  /**
+   * Get a list of all manifests
+   */
+  async getManifests(page = 1, pageSize = 20): Promise<any> {
+    try {
+      const headers = await this.getHeaders();
+      
+      const response = await axios.get(
+        `${this.baseUrl}/manifests`,
+        { 
+          headers,
+          params: {
+            page,
+            per_page: pageSize
+          }
+        }
+      );
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching manifests from Shiprocket:', error);
+      throw new Error('Failed to fetch manifests from Shiprocket');
+    }
+  }
 }
 
 export const shiprocketApiService = new ShiprocketApiService();

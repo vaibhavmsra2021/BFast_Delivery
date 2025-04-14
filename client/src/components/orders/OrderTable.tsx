@@ -28,6 +28,7 @@ import { OrderDetails } from "./OrderDetails";
 interface Order {
   id: string;
   orderId: string;
+  displayOrderId?: string; // Optional display version of the order ID
   customer: {
     name: string;
     phone: string;
@@ -49,7 +50,7 @@ interface Order {
     state: string;
     pincode: string;
   };
-  dimensions: number[];
+  dimensions: number[] | string; // Can be either array or string
   weight: number;
   lastUpdate: {
     timestamp: string;
@@ -196,7 +197,7 @@ export function OrderTable({
                       className="hover:bg-neutral-50 cursor-pointer"
                       onClick={() => handleViewDetails(order)}
                     >
-                      <TableCell className="font-medium">{order.orderId}</TableCell>
+                      <TableCell className="font-medium">{order.displayOrderId || order.orderId}</TableCell>
                       <TableCell>{order.customer.name}</TableCell>
                       <TableCell>{order.date}</TableCell>
                       <TableCell>

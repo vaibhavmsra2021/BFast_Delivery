@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 interface Order {
   id: string;
   orderId: string;
+  displayOrderId?: string; // Optional display version of the order ID
   customer: {
     name: string;
     phone: string;
@@ -38,7 +39,7 @@ interface Order {
     state: string;
     pincode: string;
   };
-  dimensions: number[];
+  dimensions: number[] | string; // Can be array or string
   weight: number;
   lastUpdate: {
     timestamp: string;
@@ -93,7 +94,17 @@ export function OrderDetails({ order, onUpdate }: OrderDetailsProps) {
     }
     
     // Check if dimensions or weight were changed
-    const dimensionsChanged = !order.dimensions.every((dim, index) => dim === editableOrder.dimensions[index]);
+    // Safely check if dimensions have changed by ensuring dimensions is an array
+    let dimensionsChanged = false;
+    if (Array.isArray(order.dimensions) && Array.isArray(editableOrder.dimensions)) {
+      // Compare only if both are arrays
+      dimensionsChanged = order.dimensions.length !== editableOrder.dimensions.length || 
+        !order.dimensions.every((dim, index) => dim === editableOrder.dimensions[index]);
+    } else if (order.dimensions !== editableOrder.dimensions) {
+      // If either is not an array but they're different
+      dimensionsChanged = true;
+    }
+    
     const weightChanged = order.weight !== editableOrder.weight;
     
     if (dimensionsChanged || weightChanged) {
@@ -135,7 +146,7 @@ export function OrderDetails({ order, onUpdate }: OrderDetailsProps) {
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-xl font-bold">
-            Order {order.orderId}
+            Order {order.displayOrderId || order.orderId}
             <Badge className="ml-2" variant="outline">
               {order.paymentMode}
             </Badge>
@@ -284,42 +295,49 @@ export function OrderDetails({ order, onUpdate }: OrderDetailsProps) {
                       <div className="flex space-x-2">
                         <Input
                           type="number"
-                          value={editableOrder.dimensions[0]}
-                          onChange={(e) =>
-                            handleChange("dimensions", [
-                              parseFloat(e.target.value),
-                              editableOrder.dimensions[1],
-                              editableOrder.dimensions[2],
-                            ])
-                          }
+                          value={Array.isArray(editableOrder.dimensions) && editableOrder.dimensions.length > 0 
+                            ? editableOrder.dimensions[0]
+                            : 0}
+                          onChange={(e) => {
+                            const dims = Array.isArray(editableOrder.dimensions) 
+                              ? [...editableOrder.dimensions] 
+                              : [0, 0, 0];
+                            dims[0] = parseFloat(e.target.value) || 0;
+                            handleChange("dimensions", dims);
+                          }}
                         />
                         <Input
                           type="number"
-                          value={editableOrder.dimensions[1]}
-                          onChange={(e) =>
-                            handleChange("dimensions", [
-                              editableOrder.dimensions[0],
-                              parseFloat(e.target.value),
-                              editableOrder.dimensions[2],
-                            ])
-                          }
+                          value={Array.isArray(editableOrder.dimensions) && editableOrder.dimensions.length > 1 
+                            ? editableOrder.dimensions[1]
+                            : 0}
+                          onChange={(e) => {
+                            const dims = Array.isArray(editableOrder.dimensions) 
+                              ? [...editableOrder.dimensions] 
+                              : [0, 0, 0];
+                            dims[1] = parseFloat(e.target.value) || 0;
+                            handleChange("dimensions", dims);
+                          }}
                         />
                         <Input
                           type="number"
-                          value={editableOrder.dimensions[2]}
-                          onChange={(e) =>
-                            handleChange("dimensions", [
-                              editableOrder.dimensions[0],
-                              editableOrder.dimensions[1],
-                              parseFloat(e.target.value),
-                            ])
-                          }
+                          value={Array.isArray(editableOrder.dimensions) && editableOrder.dimensions.length > 2 
+                            ? editableOrder.dimensions[2]
+                            : 0}
+                          onChange={(e) => {
+                            const dims = Array.isArray(editableOrder.dimensions) 
+                              ? [...editableOrder.dimensions] 
+                              : [0, 0, 0];
+                            dims[2] = parseFloat(e.target.value) || 0;
+                            handleChange("dimensions", dims);
+                          }}
                         />
                       </div>
                     ) : (
                       <p>
-                        {order.dimensions[0]} × {order.dimensions[1]} ×{" "}
-                        {order.dimensions[2]} cm
+                        {Array.isArray(order.dimensions) && order.dimensions.length >= 3
+                          ? `${order.dimensions[0]} × ${order.dimensions[1]} × ${order.dimensions[2]} cm`
+                          : "Dimensions not available"}
                       </p>
                     )}
                   </div>
@@ -342,24 +360,7 @@ export function OrderDetails({ order, onUpdate }: OrderDetailsProps) {
 
                   <div>
                     <Label>Shipping Method</Label>
-                    {editMode ? (
-                      <Select
-                        value={editableOrder.shippingAddress.shippingMethod}
-                        onValueChange={(value) =>
-                          handleChange("shippingAddress.shippingMethod", value)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Express">Express</SelectItem>
-                          <SelectItem value="Surface">Surface</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <p>{order.shippingAddress.shippingMethod || "Express"}</p>
-                    )}
+                    <p>Surface</p>
                   </div>
                 </div>
 

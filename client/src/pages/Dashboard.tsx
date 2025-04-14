@@ -265,7 +265,7 @@ export default function Dashboard() {
         {/* Shiprocket Orders */}
         {canViewShiprocketOrders && (
           <div className="mt-8">
-            <ShiprocketOrdersList maxItems={5} />
+            <ShiprocketOrdersList maxItems={20} />
           </div>
         )}
       </div>

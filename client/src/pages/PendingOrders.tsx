@@ -102,9 +102,12 @@ export default function PendingOrders() {
   };
 
   const handleUpdateOrder = (orderId: string, data: any) => {
+    console.log("Updating order with data:", data);
+    
     // Map UI data back to API format
     const apiData: any = {};
     
+    // Handle product details if they exist
     if (data.product) {
       apiData.product_details = {
         dimensions: data.dimensions,
@@ -112,10 +115,31 @@ export default function PendingOrders() {
       };
     }
     
+    // Single fields mapping
     if (data.status) {
       apiData.fulfillment_status = data.status;
     }
     
+    if (data.awb) {
+      apiData.awb = data.awb;
+    }
+    
+    if (data.courier) {
+      apiData.courier = data.courier;
+    }
+    
+    if (data.weight) {
+      // If weight is provided directly (not through product)
+      if (!apiData.product_details) {
+        apiData.product_details = [{
+          weight: data.weight
+        }];
+      } else {
+        apiData.product_details.weight = data.weight;
+      }
+    }
+    
+    console.log("Sending API data:", apiData);
     updateOrderMutation.mutate({ orderId, data: apiData });
   };
   

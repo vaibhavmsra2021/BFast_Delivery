@@ -29,6 +29,7 @@ interface Order {
   courier: string;
   amount: string;
   paymentMode: string;
+  shippingMethod?: string; // Optional shipping method
   product: {
     name: string;
     quantity: number;
@@ -91,6 +92,10 @@ export function OrderDetails({ order, onUpdate }: OrderDetailsProps) {
     
     if (order.courier !== editableOrder.courier) {
       updatedData.courier = editableOrder.courier;
+    }
+    
+    if (order.shippingMethod !== editableOrder.shippingMethod) {
+      updatedData.shippingMethod = editableOrder.shippingMethod;
     }
     
     // Check if dimensions or weight were changed
@@ -360,7 +365,22 @@ export function OrderDetails({ order, onUpdate }: OrderDetailsProps) {
 
                   <div>
                     <Label>Shipping Method</Label>
-                    <p>Surface</p>
+                    {editMode ? (
+                      <Select
+                        value={editableOrder.shippingMethod || "Surface"}
+                        onValueChange={(value) => handleChange("shippingMethod", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Express">Express</SelectItem>
+                          <SelectItem value="Surface">Surface</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p>{order.shippingMethod || "Surface"}</p>
+                    )}
                   </div>
                 </div>
 

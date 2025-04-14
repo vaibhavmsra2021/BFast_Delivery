@@ -208,32 +208,34 @@ export function OrderTable({
                         {order.awb || "-"}
                       </TableCell>
                       <TableCell>{order.amount}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
-                          {showActionButtons && !order.awb ? (
-                            <Button
-                              size="sm"
-                              onClick={() => handleAssignAWB(order.orderId)}
-                            >
-                              Assign AWB
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewDetails(order)}
-                            >
-                              Edit
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+                      {showActionButtons && (
+                        <TableCell>
+                          <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                            {!order.awb ? (
+                              <Button
+                                size="sm"
+                                onClick={() => handleAssignAWB(order.orderId)}
+                              >
+                                Assign AWB
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewDetails(order)}
+                              >
+                                Edit
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={showActionButtons ? 7 : 6}
                       className="text-center py-8 text-neutral-500"
                     >
                       No orders found

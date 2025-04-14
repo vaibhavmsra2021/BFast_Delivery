@@ -7,9 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import { OrderTable } from "@/components/orders/OrderTable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function PendingOrders() {
   const { toast } = useToast();
@@ -298,89 +295,9 @@ export default function PendingOrders() {
             </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select 
-                    defaultValue={selectedOrder.status}
-                    onValueChange={(value) => {
-                      // Create an updated order with the new status
-                      const updatedOrder = { ...selectedOrder, status: value };
-                      setSelectedOrder(updatedOrder);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="In-Process">In Process</SelectItem>
-                      <SelectItem value="Delivered">Delivered</SelectItem>
-                      <SelectItem value="RTO">RTO</SelectItem>
-                      <SelectItem value="NDR">NDR</SelectItem>
-                      <SelectItem value="Lost">Lost</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="awb">AWB Number</Label>
-                  <Input 
-                    id="awb"
-                    value={selectedOrder.awb || ''}
-                    onChange={(e) => {
-                      const updatedOrder = { ...selectedOrder, awb: e.target.value };
-                      setSelectedOrder(updatedOrder);
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="courier">Courier</Label>
-                  <Input 
-                    id="courier"
-                    value={selectedOrder.courier || ''}
-                    onChange={(e) => {
-                      const updatedOrder = { ...selectedOrder, courier: e.target.value };
-                      setSelectedOrder(updatedOrder);
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="weight">Weight (g)</Label>
-                  <Input 
-                    id="weight"
-                    type="number"
-                    value={selectedOrder.weight || ''}
-                    onChange={(e) => {
-                      const updatedOrder = { ...selectedOrder, weight: e.target.value };
-                      setSelectedOrder(updatedOrder);
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setSelectedOrder(null)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => {
-                  // Save changes
-                  const orderData = {
-                    status: selectedOrder.status,
-                    awb: selectedOrder.awb,
-                    courier: selectedOrder.courier,
-                    weight: selectedOrder.weight
-                  };
-                  
-                  // Update the order with the new data
-                  handleUpdateOrder(selectedOrder.orderId, orderData);
-                }}>
-                  Save Changes
-                </Button>
-              </div>
+            <div>
+              {/* Order details content would go here */}
+              <p>Order ID: {selectedOrder.orderId}</p>
             </div>
           )}
         </DialogContent>

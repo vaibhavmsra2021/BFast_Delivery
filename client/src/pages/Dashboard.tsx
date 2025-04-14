@@ -137,7 +137,7 @@ export default function Dashboard() {
   const getRecentOrders = (): RecentOrder[] => {
     if (!ordersData || ordersData.length === 0) return [];
     
-    return ordersData.slice(0, 20).map((order: any) => {
+    return ordersData.slice(0, 5).map((order: any) => {
       // Calculate order amount from product_details if available
       let amount = '₹0.00';
       if (order.product_details && Array.isArray(order.product_details)) {

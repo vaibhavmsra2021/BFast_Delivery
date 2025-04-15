@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { getOrderSummary, getAllOrders } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getOrderSummary, getAllOrders, syncShopifyOrders } from "@/lib/api";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StatusChart } from "@/components/dashboard/StatusChart";
 import { IndiaMap } from "@/components/dashboard/IndiaMap";
@@ -11,11 +11,14 @@ import {
   Clock, 
   CheckCircle, 
   RotateCcw,
-  ArrowUp
+  ArrowUp,
+  RefreshCw,
+  ShoppingBag
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 // Define types for our data structure
 interface OrderSummary {
@@ -173,17 +176,59 @@ export default function Dashboard() {
   const regionData = getRegionData();
   const recentOrders = getRecentOrders();
   
-  // Check if user has access to Shiprocket orders
+  // Check if user has access to advanced features
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const canViewShiprocketOrders = user?.role === UserRole.BFAST_ADMIN || user?.role === UserRole.BFAST_EXECUTIVE;
+  
+  // Mutation for syncing Shopify orders
+  const syncShopifyMutation = useMutation({
+    mutationFn: () => syncShopifyOrders(user?.clientId || undefined),
+    onSuccess: (data) => {
+      toast({
+        title: "Orders synced successfully",
+        description: data.message || `Synced ${data.total} orders from Shopify`,
+        variant: "default",
+      });
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orders/summary'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync failed",
+        description: error.message || "Failed to sync orders from Shopify",
+        variant: "destructive",
+      });
+    }
+  });
 
   return (
     <div className="py-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <h1 className="text-2xl font-semibold text-neutral-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-neutral-600">
-          Analytics and overview of your shipping operations.
-        </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-neutral-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-neutral-600">
+            Analytics and overview of your shipping operations.
+          </p>
+        </div>
+        <div className="flex space-x-3">
+          <Button
+            onClick={() => syncShopifyMutation.mutate()}
+            disabled={syncShopifyMutation.isPending}
+            variant="outline"
+            className="gap-2"
+          >
+            {syncShopifyMutation.isPending ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <ShoppingBag className="h-4 w-4" />
+            )}
+            Sync Shopify Orders
+          </Button>
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mt-6">

@@ -117,8 +117,25 @@ export const bulkUpdateOrders = async (updates: Array<{ orderId: string, data: a
 };
 
 // Shopify API
-export const syncShopifyOrders = async () => {
-  const response = await apiRequest('POST', '/api/shopify/sync');
+export const getShopifyOrders = async (clientId?: string, limit: number = 50) => {
+  const params = new URLSearchParams();
+  if (clientId) params.append('clientId', clientId);
+  if (limit) params.append('limit', String(limit));
+  
+  const response = await apiRequest('GET', `/api/shopify/orders?${params.toString()}`);
+  return response.json();
+};
+
+export const getShopifyProducts = async (limit: number = 50) => {
+  const params = new URLSearchParams();
+  if (limit) params.append('limit', String(limit));
+  
+  const response = await apiRequest('GET', `/api/shopify/products?${params.toString()}`);
+  return response.json();
+};
+
+export const syncShopifyOrders = async (clientId?: string) => {
+  const response = await apiRequest('POST', '/api/shopify/sync-orders', { clientId });
   return response.json();
 };
 

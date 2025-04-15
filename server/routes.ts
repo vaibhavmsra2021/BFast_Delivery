@@ -891,6 +891,85 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
 
   // Shiprocket data routes have been removed
   
+  // Shopify API routes
+  apiRouter.get(
+    "/shopify/orders",
+    authService.authenticate,
+    async (req: Request, res: Response) => {
+      try {
+        const user = (req as any).user;
+        const clientId = user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE 
+          ? user.clientId 
+          : req.query.clientId as string;
+        
+        if (!clientId) {
+          return res.status(400).json({ message: "Client ID is required" });
+        }
+        
+        const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+        const orders = await shopifyApiService.getOrders(limit);
+        
+        res.json({ orders });
+      } catch (error) {
+        console.error("Error fetching Shopify orders:", error);
+        res.status(500).json({ 
+          message: "An error occurred while fetching Shopify orders",
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  );
+  
+  apiRouter.get(
+    "/shopify/products",
+    authService.authenticate,
+    async (req: Request, res: Response) => {
+      try {
+        const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+        const products = await shopifyApiService.getProducts(limit);
+        
+        res.json({ products });
+      } catch (error) {
+        console.error("Error fetching Shopify products:", error);
+        res.status(500).json({ 
+          message: "An error occurred while fetching Shopify products",
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  );
+  
+  apiRouter.post(
+    "/shopify/sync-orders",
+    authService.authenticate,
+    authService.authorize([UserRole.BFAST_ADMIN, UserRole.BFAST_EXECUTIVE, UserRole.CLIENT_ADMIN]),
+    async (req: Request, res: Response) => {
+      try {
+        const user = (req as any).user;
+        const clientId = user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE 
+          ? user.clientId 
+          : req.body.clientId;
+        
+        if (!clientId) {
+          return res.status(400).json({ message: "Client ID is required" });
+        }
+        
+        const result = await shopifyApiService.syncOrdersToDatabase(clientId);
+        
+        res.json({ 
+          message: `Synced ${result.total} orders from Shopify: ${result.created} created, ${result.updated} updated`,
+          ...result
+        });
+      } catch (error) {
+        console.error("Error syncing Shopify orders:", error);
+        res.status(500).json({ 
+          message: "An error occurred while syncing Shopify orders",
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  );
+  
   // Use API router
   app.use("/api", apiRouter);
   

@@ -950,20 +950,31 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
           ? user.clientId 
           : req.body.clientId;
         
-        // If no client ID is found, try to get the first client from the database
+        // If no client ID is found, try to get a client with Shopify credentials
         if (!clientId) {
-          console.log("No client ID provided, attempting to use the first client from database");
+          console.log("No client ID provided, attempting to find a client with Shopify credentials");
           const clients = await storage.getAllClients();
-          if (clients && clients.length > 0) {
+          
+          // First try to find a client with Shopify credentials
+          const clientWithShopify = clients.find(client => 
+            client.shopify_api_key && client.shopify_api_secret && client.shopify_store_id
+          );
+          
+          if (clientWithShopify) {
+            clientId = clientWithShopify.client_id;
+            console.log(`Using client with Shopify credentials: ${clientId}`);
+          } else if (clients && clients.length > 0) {
+            // Fallback to first client if none have credentials
             clientId = clients[0].client_id;
-            console.log(`Using client ID: ${clientId}`);
+            console.log(`Falling back to first client: ${clientId}`);
           } else {
             return res.status(400).json({ message: "No clients found in the system" });
           }
         }
         
+        // Double-check for presence of client ID 
         if (!clientId) {
-          return res.status(400).json({ message: "Client ID is required" });
+          return res.status(400).json({ message: "Unable to determine client ID" });
         }
         
         const result = await shopifyApiService.syncOrdersToDatabase(clientId);

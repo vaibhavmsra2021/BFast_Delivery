@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { AuthService } from "./services/auth";
 import { ShopifyService } from "./services/shopify";
+import { ShopifyApiService } from "./services/shopifyApi";
 import { ShiprocketService } from "./services/shiprocket";
 import { ShiprocketApiService, shiprocketApiService } from "./services/shiprocketApi";
 import { CronService } from "./services/cron";

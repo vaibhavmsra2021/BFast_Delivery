@@ -135,7 +135,8 @@ export const getShopifyProducts = async (limit: number = 50) => {
 };
 
 export const syncShopifyOrders = async (clientId?: string) => {
-  const response = await apiRequest('POST', '/api/shopify/sync-orders', { clientId });
+  // Make sure we always send clientId in the request body
+  const response = await apiRequest('POST', '/api/shopify/sync-orders', { clientId: clientId || '' });
   return response.json();
 };
 

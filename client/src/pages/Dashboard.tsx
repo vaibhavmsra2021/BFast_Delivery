@@ -184,7 +184,23 @@ export default function Dashboard() {
   
   // Mutation for syncing Shopify orders
   const syncShopifyMutation = useMutation({
-    mutationFn: () => syncShopifyOrders(user?.clientId || undefined),
+    mutationFn: async () => {
+      // If the user has a clientId, use it, otherwise if they're an admin, 
+      // use the first available client's ID
+      if (user?.clientId) {
+        return syncShopifyOrders(user.clientId);
+      } else if (user?.role === UserRole.BFAST_ADMIN || user?.role === UserRole.BFAST_EXECUTIVE) {
+        // Get the client data
+        const clientsResponse = await apiRequest('GET', '/api/clients');
+        const clients = await clientsResponse.json();
+        if (clients && clients.length > 0) {
+          return syncShopifyOrders(clients[0].client_id);
+        }
+      }
+      
+      // If no client ID could be determined, show an error
+      throw new Error("No client ID available for syncing Shopify orders");
+    },
     onSuccess: (data) => {
       toast({
         title: "Orders synced successfully",

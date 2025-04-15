@@ -27,6 +27,7 @@ import {
 export async function registerRoutes(app: express.Express): Promise<Server> {
   const authService = new AuthService(storage);
   const shopifyService = new ShopifyService(storage);
+  const shopifyApiService = new ShopifyApiService(storage);
   const shiprocketService = new ShiprocketService(storage);
   const cronService = new CronService(shopifyService, shiprocketService);
   

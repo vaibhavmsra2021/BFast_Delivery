@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { IStorage } from '../storage';
-import { OrderStatusType } from '@shared/schema';
+import { OrderStatus, OrderStatusType, ShippingMethod, PaymentMode } from '@shared/schema';
 
 interface ShopifyOrdersResponse {
   orders: ShopifyOrder[];

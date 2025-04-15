@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getOrderSummary, getAllOrders, syncShopifyOrders } from "@/lib/api";
+import { getOrderSummary, getAllOrders, syncShopifyOrders, getClients } from "@/lib/api";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StatusChart } from "@/components/dashboard/StatusChart";
 import { IndiaMap } from "@/components/dashboard/IndiaMap";
@@ -191,8 +191,7 @@ export default function Dashboard() {
         return syncShopifyOrders(user.clientId);
       } else if (user?.role === UserRole.BFAST_ADMIN || user?.role === UserRole.BFAST_EXECUTIVE) {
         // Get the client data
-        const clientsResponse = await apiRequest('GET', '/api/clients');
-        const clients = await clientsResponse.json();
+        const clients = await getClients();
         if (clients && clients.length > 0) {
           return syncShopifyOrders(clients[0].client_id);
         }

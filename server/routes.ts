@@ -946,9 +946,21 @@ export async function registerRoutes(app: express.Express): Promise<Server> {
     async (req: Request, res: Response) => {
       try {
         const user = (req as any).user;
-        const clientId = user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE 
+        let clientId = user.role === UserRole.CLIENT_ADMIN || user.role === UserRole.CLIENT_EXECUTIVE 
           ? user.clientId 
           : req.body.clientId;
+        
+        // If no client ID is found, try to get the first client from the database
+        if (!clientId) {
+          console.log("No client ID provided, attempting to use the first client from database");
+          const clients = await storage.getAllClients();
+          if (clients && clients.length > 0) {
+            clientId = clients[0].client_id;
+            console.log(`Using client ID: ${clientId}`);
+          } else {
+            return res.status(400).json({ message: "No clients found in the system" });
+          }
+        }
         
         if (!clientId) {
           return res.status(400).json({ message: "Client ID is required" });
